@@ -1,6 +1,5 @@
 import type {
 	Icon,
-	IAuthenticateGeneric,
 	ICredentialTestRequest,
 	ICredentialType,
 	INodeProperties,
@@ -74,14 +73,7 @@ export class FiveDayOAuth2Api implements ICredentialType {
 		},
 	];
 
-	authenticate: IAuthenticateGeneric = {
-		type: 'generic',
-		properties: {
-			headers: {
-				'r-day5n8n-api-key': '={{$credentials.oauthTokenData.access_token}}',
-			},
-		},
-	};
+	// Let n8n's built-in oAuth2Api handle the Authorization: Bearer token automatically
 
 	test: ICredentialTestRequest = {
 		request: {

@@ -8,23 +8,23 @@ import type {
 	ILoadOptionsFunctions,
 	INodePropertyOptions,
 } from 'n8n-workflow';
-import { NodeApiError } from 'n8n-workflow';
+import { NodeConnectionTypes, NodeApiError } from 'n8n-workflow';
 
 export class Fiveday implements INodeType {
     description: INodeTypeDescription = {
-        displayName: '5day',
+        displayName: '5day.io',
         name: 'fiveday',
-        icon: 'file:5day.svg',
+        icon: 'file:5day_logo.svg',
         group: ['transform'],
         version: 1,
         usableAsTool: true,
         subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
         description: 'Integrate with 5day project management tool',
         defaults: {
-            name: 'fiveday',
+            name: '5day.io',
         },
-        inputs: ['main'],
-        outputs: ['main'],
+        inputs: [NodeConnectionTypes.Main],
+		outputs: [NodeConnectionTypes.Main],
         credentials: [
             {
                 name: 'fiveDayOAuth2Api',
@@ -78,6 +78,7 @@ export class Fiveday implements INodeType {
                 type: 'options',
                 typeOptions: {
                     loadOptionsMethod: 'getWorkspaces',
+                    loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
                 },
                 default: '',
                 required: true,
@@ -126,6 +127,7 @@ export class Fiveday implements INodeType {
                 type: 'options',
                 typeOptions: {
                     loadOptionsMethod: 'getProjects',
+                    loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
                 },
                 default: '',
                 required: true,
@@ -158,67 +160,102 @@ export class Fiveday implements INodeType {
         loadOptions: {
             // Get all the available workspaces to display them to user
             async getWorkspaces(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+                const credentials = await this.getCredentials('fiveDayOAuth2Api').catch(() => null);
+
+                if (!credentials || !credentials.oauthTokenData) {
+                    return []; // OAuth2 not connected yet
+                }
+
+                // Get access token from OAuth data
+                const oauthTokenData = credentials.oauthTokenData as IDataObject;
+                const accessToken = oauthTokenData.access_token as string;
+
+                if (!accessToken) {
+                    return []; // No access token available
+                }
+
                 // const baseUrl = 'https://gateway.dev.5daylabs.com';
                 const baseUrl = 'http://localhost:41060';
                 const platform = 'n8n';
                 const entity = 'workspace';
 
                 try {
-                    // Fetch workspaces with OAuth2 token (automatically added by n8n)
-                    const workspacesResponse = await this.helpers.httpRequestWithAuthentication.call(
-                        this,
-                        'fiveDayOAuth2Api',
-                        {
-                            method: 'GET',
-                            url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
+                    // Fetch workspaces with custom header (5day uses r-day5n8n-api-key, not Authorization)
+                    const workspacesResponse = await this.helpers.httpRequest({
+                        method: 'GET',
+                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'r-day5n8n-api-key': accessToken,
                         },
-                    );
+                    });
 
                     // Parse the workspaces response and return as options
-                    const workspaces = workspacesResponse as IDataObject[];
+                    const workspaces = Array.isArray(workspacesResponse) ? workspacesResponse : workspacesResponse.data || [];
+
                     return workspaces.map((workspace: IDataObject) => ({
                         name: workspace.name as string,
                         value: workspace.id as string,
                     }));
                 } catch (error) {
-                    throw new NodeApiError(this.getNode(), error as JsonObject, {
+                    const errorObj = error as JsonObject;
+                    const errorMessage = typeof errorObj.message === 'string'
+                        ? errorObj.message
+                        : 'Unknown error occurred';
+
+                    throw new NodeApiError(this.getNode(), errorObj, {
                         message: 'Failed to load workspaces',
+                        description: errorMessage,
                     });
                 }
             },
             // Get all the available projects to display them to user
             async getProjects(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+                const credentials = await this.getCredentials('fiveDayOAuth2Api').catch(() => null);
+
+                if (!credentials || !credentials.oauthTokenData || Object.keys(credentials.oauthTokenData).length === 0) {
+                    return []; // OAuth2 not connected yet
+                }
+
+                // Get access token from OAuth data
+                const oauthTokenData = credentials.oauthTokenData as IDataObject;
+                const accessToken = oauthTokenData.access_token as string;
+
+                if (!accessToken) {
+                    return []; // No access token available
+                }
+
                 // const baseUrl = 'https://gateway.dev.5daylabs.com';
                 const baseUrl = 'http://localhost:41060';
                 const platform = 'n8n';
                 const entity = 'project';
 
                 try {
-                    // Fetch projects with OAuth2 token (automatically added by n8n)
-                    const projectsResponse = await this.helpers.httpRequestWithAuthentication.call(
-                        this,
-                        'fiveDayOAuth2Api',
-                        {
-                            method: 'GET',
-                            url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
+                    // Fetch projects with custom header (5day uses r-day5n8n-api-key, not Authorization)
+                    const projectsResponse = await this.helpers.httpRequest({
+                        method: 'GET',
+                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'r-day5n8n-api-key': accessToken,
                         },
-                    );
+                    });
 
-                    // Parse the projects response and return as options
-                    const projects = projectsResponse as IDataObject[];
+                    const projects = Array.isArray(projectsResponse) ? projectsResponse : projectsResponse.data || [];
+
                     return projects.map((project: IDataObject) => ({
                         name: project.name as string,
                         value: project.id as string,
                     }));
                 } catch (error) {
-                    throw new NodeApiError(this.getNode(), error as JsonObject, {
+                    const errorObj = error as JsonObject;
+                    const errorMessage = typeof errorObj.message === 'string'
+                        ? errorObj.message
+                        : 'Unknown error occurred';
+
+                    throw new NodeApiError(this.getNode(), errorObj, {
                         message: 'Failed to load projects',
+                        description: errorMessage,
                     });
                 }
             },
@@ -233,6 +270,11 @@ export class Fiveday implements INodeType {
         const operation = this.getNodeParameter('operation', 0) as string;
         // const baseUrl = 'https://gateway.dev.5daylabs.com';
         const baseUrl = 'http://localhost:41060';
+
+        // Get access token from credentials
+        const credentials = await this.getCredentials('fiveDayOAuth2Api');
+        const oauthTokenData = credentials.oauthTokenData as IDataObject;
+        const accessToken = oauthTokenData.access_token as string;
 
         for (let i = 0; i < items.length; i++) {
             try {
@@ -252,20 +294,17 @@ export class Fiveday implements INodeType {
                     const platform = 'n8n';
                     const entity = 'project';
 
-                    // Call create project API with OAuth2 token (automatically added by n8n)
-                    const projectResponse = await this.helpers.httpRequestWithAuthentication.call(
-                        this,
-                        'fiveDayOAuth2Api',
-                        {
-                            method: 'POST',
-                            url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'workspace-id': workspaceId,
-                            },
-                            body,
+                    // Call create project API with custom header
+                    const projectResponse = await this.helpers.httpRequest({
+                        method: 'POST',
+                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'r-day5n8n-api-key': accessToken,
+                            'workspace-id': workspaceId,
                         },
-                    );
+                        body,
+                    });
 
                     // Return the created project
                     returnData.push({ json: projectResponse as IDataObject });
@@ -282,19 +321,16 @@ export class Fiveday implements INodeType {
                     const platform = 'n8n';
                     const entity = 'task';
 
-                    // Call create task API with OAuth2 token (automatically added by n8n)
-                    const taskResponse = await this.helpers.httpRequestWithAuthentication.call(
-                        this,
-                        'fiveDayOAuth2Api',
-                        {
-                            method: 'POST',
-                            url: `${baseUrl}/api/integration-service/v1/execution/${platform}/event/${entity}`,
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body,
+                    // Call create task API with custom header
+                    const taskResponse = await this.helpers.httpRequest({
+                        method: 'POST',
+                        url: `${baseUrl}/api/integration-service/v1/execution/${platform}/event/${entity}`,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'r-day5n8n-api-key': accessToken,
                         },
-                    );
+                        body,
+                    });
 
                     // Return the created task
                     returnData.push({ json: taskResponse as IDataObject });

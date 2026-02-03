@@ -1,12 +1,37 @@
 {
-	"version": "0.2.0",
-	"configurations": [
-		{
-			"name": "Attach to running n8n",
-			"processId": "${command:PickProcess}",
-			"request": "attach",
-			"skipFiles": ["<node_internals>/**"],
-			"type": "node"
-		}
-	]
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "attach",
+            "name": "Attach to n8n",
+            "port": 9230,
+            "restart": true,
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceFolder}/dist/**/*.js"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug n8n with Custom Node",
+            "runtimeExecutable": "n8n",
+            "runtimeArgs": [
+                "start"
+            ],
+            "console": "integratedTerminal",
+            "restart": true,
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "env": {
+                "NODE_OPTIONS": "--inspect",
+                "LOG_LEVEL": "debug"
+            }
+        }
+    ]
 }
