@@ -872,6 +872,7 @@ export class Fiveday implements INodeType {
                             'Content-Type': 'application/json',
                             'r-day5n8n-api-key': accessToken,
                             'workspace-id': workspaceId,
+                            'action': 'create',
                         },
                         body,
                     });
@@ -893,6 +894,7 @@ export class Fiveday implements INodeType {
                         headers: {
                             'Content-Type': 'application/json',
                             'r-day5n8n-api-key': accessToken,
+                            'action': 'delete',
                         },
                     });
 
@@ -971,6 +973,7 @@ export class Fiveday implements INodeType {
                         headers: {
                             'Content-Type': 'application/json',
                             'r-day5n8n-api-key': accessToken,
+                            'action': 'update',
                         },
                         body,
                     });
@@ -981,18 +984,18 @@ export class Fiveday implements INodeType {
                 //           Task Actions - Create
                 // ----------------------------------------
                 else if (resource === 'taskActions' && operation === 'create') {
-                    const projectid = this.getNodeParameter('projectId', i) as string;
-                    const workitemtypeid = this.getNodeParameter('workitemTypeId', i) as string;
+                    const projectId = this.getNodeParameter('projectId', i) as string;
+                    const taskTypeId = this.getNodeParameter('workitemTypeId', i) as string;
                     const taskName = this.getNodeParameter('taskName', i) as string;
 
                     const body: IDataObject = {
                         name: taskName,
-                        projectid,
-                        workitemtypeid,
+                        projectId,
+                        taskTypeId,
                     };
 
                     const platform = 'n8n';
-                    const entity = 'task';
+                    const entity = 'workitem';
 
                     const taskResponse = await this.helpers.httpRequest({
                         method: 'POST',
@@ -1000,6 +1003,7 @@ export class Fiveday implements INodeType {
                         headers: {
                             'Content-Type': 'application/json',
                             'r-day5n8n-api-key': accessToken,
+                            'action': 'create',
                         },
                         body,
                     });
@@ -1013,7 +1017,7 @@ export class Fiveday implements INodeType {
                     const taskId = this.getNodeParameter('taskId', i) as string;
 
                     const platform = 'n8n';
-                    const entity = 'task';
+                    const entity = 'workitem';
 
                     const response = await this.helpers.httpRequest({
                         method: 'DELETE',
@@ -1021,6 +1025,7 @@ export class Fiveday implements INodeType {
                         headers: {
                             'Content-Type': 'application/json',
                             'r-day5n8n-api-key': accessToken,
+                            'action': 'delete',
                         },
                     });
 
@@ -1033,7 +1038,7 @@ export class Fiveday implements INodeType {
                     const taskId = this.getNodeParameter('taskId', i) as string;
 
                     const platform = 'n8n';
-                    const entity = 'task';
+                    const entity = 'workitem';
 
                     const response = await this.helpers.httpRequest({
                         method: 'GET',
@@ -1054,7 +1059,7 @@ export class Fiveday implements INodeType {
                     const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 
                     const platform = 'n8n';
-                    const entity = 'task';
+                    const entity = 'workitem';
 
                     const qs: IDataObject = {
                         projectId,
@@ -1088,7 +1093,7 @@ export class Fiveday implements INodeType {
                     const targetProjectId = this.getNodeParameter('targetProjectId', i) as string;
 
                     const platform = 'n8n';
-                    const entity = 'task';
+                    const entity = 'workitem';
 
                     const body: IDataObject = {
                         taskId,
@@ -1101,6 +1106,7 @@ export class Fiveday implements INodeType {
                         headers: {
                             'Content-Type': 'application/json',
                             'r-day5n8n-api-key': accessToken,
+                            'action': 'update',
                         },
                         body,
                     });
@@ -1115,7 +1121,7 @@ export class Fiveday implements INodeType {
                     const projectId = this.getNodeParameter('projectId', i) as string;
 
                     const platform = 'n8n';
-                    const entity = 'task';
+                    const entity = 'workitem';
 
                     const qs: IDataObject = {
                         q: searchQuery,
@@ -1148,7 +1154,7 @@ export class Fiveday implements INodeType {
                     const updateFields = this.getNodeParameter('updateFields', i) as IDataObject;
 
                     const platform = 'n8n';
-                    const entity = 'task';
+                    const entity = 'workitem';
 
                     const body: IDataObject = {
                         ...updateFields,
@@ -1160,6 +1166,7 @@ export class Fiveday implements INodeType {
                         headers: {
                             'Content-Type': 'application/json',
                             'r-day5n8n-api-key': accessToken,
+                            'action': 'update',
                         },
                         body,
                     });
