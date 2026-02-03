@@ -87,8 +87,8 @@ export class Fiveday implements INodeType {
                     {
                         name: 'Get Many',
                         value: 'getAll',
-                        description: 'Get all projects',
-                        action: 'Get all projects',
+                        description: 'Get many projects',
+                        action: 'Get many projects',
                     },
                     {
                         name: 'Update',
@@ -134,8 +134,8 @@ export class Fiveday implements INodeType {
                     {
                         name: 'Get Many',
                         value: 'getAll',
-                        description: 'Get all tasks',
-                        action: 'Get all tasks',
+                        description: 'Get many tasks',
+                        action: 'Get many tasks',
                     },
                     {
                         name: 'Move',
@@ -377,6 +377,24 @@ export class Fiveday implements INodeType {
                 description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
             },
             {
+                displayName: 'Work Item Type Name or ID',
+                name: 'workitemTypeId',
+                type: 'options',
+                typeOptions: {
+                    loadOptionsMethod: 'getWorkitemTypes',
+                    loadOptionsDependsOn: ['projectId'],
+                },
+                default: '',
+                required: true,
+                displayOptions: {
+                    show: {
+                        resource: ['taskActions'],
+                        operation: ['create'],
+                    },
+                },
+                description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+            },
+            {
                 displayName: 'Task Name',
                 name: 'taskName',
                 type: 'string',
@@ -575,13 +593,6 @@ export class Fiveday implements INodeType {
                 },
                 options: [
                     {
-                        displayName: 'Name',
-                        name: 'name',
-                        type: 'string',
-                        default: '',
-                        description: 'The new name of the task',
-                    },
-                    {
                         displayName: 'Description',
                         name: 'description',
                         type: 'string',
@@ -592,25 +603,18 @@ export class Fiveday implements INodeType {
                         description: 'The new description of the task',
                     },
                     {
-                        displayName: 'Status',
-                        name: 'status',
-                        type: 'options',
-                        options: [
-                            {
-                                name: 'To Do',
-                                value: 'todo',
-                            },
-                            {
-                                name: 'In Progress',
-                                value: 'inProgress',
-                            },
-                            {
-                                name: 'Done',
-                                value: 'done',
-                            },
-                        ],
-                        default: 'todo',
-                        description: 'The new status of the task',
+                        displayName: 'Due Date',
+                        name: 'dueDate',
+                        type: 'dateTime',
+                        default: '',
+                        description: 'The due date of the task',
+                    },
+                    {
+                        displayName: 'Name',
+                        name: 'name',
+                        type: 'string',
+                        default: '',
+                        description: 'The new name of the task',
                     },
                     {
                         displayName: 'Priority',
@@ -634,11 +638,25 @@ export class Fiveday implements INodeType {
                         description: 'The priority of the task',
                     },
                     {
-                        displayName: 'Due Date',
-                        name: 'dueDate',
-                        type: 'dateTime',
-                        default: '',
-                        description: 'The due date of the task',
+                        displayName: 'Status',
+                        name: 'status',
+                        type: 'options',
+                        options: [
+                            {
+                                name: 'To Do',
+                                value: 'todo',
+                            },
+                            {
+                                name: 'In Progress',
+                                value: 'inProgress',
+                            },
+                            {
+                                name: 'Done',
+                                value: 'done',
+                            },
+                        ],
+                        default: 'todo',
+                        description: 'The new status of the task',
                     },
                 ],
             },
@@ -669,7 +687,6 @@ export class Fiveday implements INodeType {
                 const entity = 'workspace';
 
                 try {
-                    // Fetch workspaces with custom header (5day uses r-day5n8n-api-key, not Authorization)
                     const workspacesResponse = await this.helpers.httpRequest({
                         method: 'GET',
                         url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
@@ -679,8 +696,9 @@ export class Fiveday implements INodeType {
                         },
                     });
 
-                    // Parse the workspaces response and return as options
-                    const workspaces = Array.isArray(workspacesResponse) ? workspacesResponse : workspacesResponse.data || [];
+                    const workspaces = Array.isArray(workspacesResponse?.response?.data)
+                        ? workspacesResponse.response.data
+                        : [];
 
                     return workspaces.map((workspace: IDataObject) => ({
                         name: workspace.name as string,
@@ -698,6 +716,7 @@ export class Fiveday implements INodeType {
                     });
                 }
             },
+
             // Get all the available projects to display them to user
             async getProjects(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
                 const credentials = await this.getCredentials('fiveDayOAuth2Api').catch(() => null);
@@ -720,7 +739,6 @@ export class Fiveday implements INodeType {
                 const entity = 'project';
 
                 try {
-                    // Fetch projects with custom header (5day uses r-day5n8n-api-key, not Authorization)
                     const projectsResponse = await this.helpers.httpRequest({
                         method: 'GET',
                         url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
@@ -730,7 +748,9 @@ export class Fiveday implements INodeType {
                         },
                     });
 
-                    const projects = Array.isArray(projectsResponse) ? projectsResponse : projectsResponse.data || [];
+                    const projects = Array.isArray(projectsResponse?.response?.data)
+                        ? projectsResponse.response.data
+                        : [];
 
                     return projects.map((project: IDataObject) => ({
                         name: project.name as string,
@@ -744,6 +764,66 @@ export class Fiveday implements INodeType {
 
                     throw new NodeApiError(this.getNode(), errorObj, {
                         message: 'Failed to load projects',
+                        description: errorMessage,
+                    });
+                }
+            },
+
+            // Get all available workitem types for a project
+            async getWorkitemTypes(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+                const credentials = await this.getCredentials('fiveDayOAuth2Api').catch(() => null);
+
+                if (!credentials || !credentials.oauthTokenData || Object.keys(credentials.oauthTokenData).length === 0) {
+                    return []; // OAuth2 not connected yet
+                }
+
+                // Get access token from OAuth data
+                const oauthTokenData = credentials.oauthTokenData as IDataObject;
+                const accessToken = oauthTokenData.access_token as string;
+
+                if (!accessToken) {
+                    return []; // No access token available
+                }
+
+                // Get the selected project ID
+                const projectId = this.getCurrentNodeParameter('projectId') as string;
+
+                if (!projectId) {
+                    return []; // No project selected yet
+                }
+
+                // const baseUrl = 'https://gateway.dev.5daylabs.com';
+                const baseUrl = 'http://localhost:41060';
+                const platform = 'n8n';
+                const entity = 'workitemtype';
+
+                try {
+                    const workitemTypesResponse = await this.helpers.httpRequest({
+                        method: 'GET',
+                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'r-day5n8n-api-key': accessToken,
+                            'project-id': projectId,
+                        },
+                    });
+
+                    const workitemTypes = Array.isArray(workitemTypesResponse?.response?.data)
+                        ? workitemTypesResponse.response.data
+                        : [];
+
+                    return workitemTypes.map((workitemType: IDataObject) => ({
+                        name: workitemType.name as string,
+                        value: workitemType.id as string,
+                    }));
+                } catch (error) {
+                    const errorObj = error as JsonObject;
+                    const errorMessage = typeof errorObj.message === 'string'
+                        ? errorObj.message
+                        : 'Unknown error occurred';
+
+                    throw new NodeApiError(this.getNode(), errorObj, {
+                        message: 'Failed to load workitem types',
                         description: errorMessage,
                     });
                 }
@@ -901,12 +981,14 @@ export class Fiveday implements INodeType {
                 //           Task Actions - Create
                 // ----------------------------------------
                 else if (resource === 'taskActions' && operation === 'create') {
-                    const projectId = this.getNodeParameter('projectId', i) as string;
+                    const projectid = this.getNodeParameter('projectId', i) as string;
+                    const workitemtypeid = this.getNodeParameter('workitemTypeId', i) as string;
                     const taskName = this.getNodeParameter('taskName', i) as string;
 
                     const body: IDataObject = {
                         name: taskName,
-                        projectId,
+                        projectid,
+                        workitemtypeid,
                     };
 
                     const platform = 'n8n';
@@ -1089,6 +1171,6 @@ export class Fiveday implements INodeType {
             }
         }
 
-        return [returnData];
+        return [returnData as INodeExecutionData[]];
     }
 }
