@@ -464,6 +464,37 @@ export class Fiveday implements INodeType {
                 description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
             },
             {
+                displayName: 'Filter by Section',
+                name: 'filterBySection',
+                type: 'boolean',
+                default: false,
+                displayOptions: {
+                    show: {
+                        resource: ['taskActions'],
+                        operation: ['getAll'],
+                    },
+                },
+                description: 'Whether to filter tasks by a specific section',
+            },
+            {
+                displayName: 'Section Name or ID',
+                name: 'sectionId',
+                type: 'options',
+                typeOptions: {
+                    loadOptionsMethod: 'getSections',
+                    loadOptionsDependsOn: ['projectId'],
+                },
+                default: '',
+                displayOptions: {
+                    show: {
+                        resource: ['taskActions'],
+                        operation: ['getAll'],
+                        filterBySection: [true],
+                    },
+                },
+                description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+            },
+            {
                 displayName: 'Return All',
                 name: 'returnAll',
                 type: 'boolean',
@@ -477,8 +508,25 @@ export class Fiveday implements INodeType {
                 description: 'Whether to return all results or only up to a given limit',
             },
             {
-                displayName: 'Limit',
-                name: 'limit',
+                displayName: 'Page Number',
+                name: 'pageNum',
+                type: 'number',
+                default: 1,
+                typeOptions: {
+                    minValue: 1,
+                },
+                displayOptions: {
+                    show: {
+                        resource: ['taskActions'],
+                        operation: ['getAll'],
+                        returnAll: [false],
+                    },
+                },
+                description: 'The page number to retrieve',
+            },
+            {
+                displayName: 'Page Size',
+                name: 'pageSize',
                 type: 'number',
                 default: 50,
                 typeOptions: {
@@ -491,7 +539,7 @@ export class Fiveday implements INodeType {
                         returnAll: [false],
                     },
                 },
-                description: 'Max number of results to return',
+                description: 'Number of records per page',
             },
             // ----------------------------------------
             //       Task Actions - Move Fields
@@ -828,6 +876,66 @@ export class Fiveday implements INodeType {
                     });
                 }
             },
+
+            // Get all available sections for a project
+            async getSections(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+                const credentials = await this.getCredentials('fiveDayOAuth2Api').catch(() => null);
+
+                if (!credentials || !credentials.oauthTokenData || Object.keys(credentials.oauthTokenData).length === 0) {
+                    return []; // OAuth2 not connected yet
+                }
+
+                // Get access token from OAuth data
+                const oauthTokenData = credentials.oauthTokenData as IDataObject;
+                const accessToken = oauthTokenData.access_token as string;
+
+                if (!accessToken) {
+                    return []; // No access token available
+                }
+
+                // Get the selected project ID
+                const projectId = this.getCurrentNodeParameter('projectId') as string;
+
+                if (!projectId) {
+                    return []; // No project selected yet
+                }
+
+                // const baseUrl = 'https://gateway.dev.5daylabs.com';
+                const baseUrl = 'http://localhost:41060';
+                const platform = 'n8n';
+                const entity = 'section';
+
+                try {
+                    const sectionsResponse = await this.helpers.httpRequest({
+                        method: 'GET',
+                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'r-day5n8n-api-key': accessToken,
+                            'project-id': projectId,
+                        },
+                    });
+
+                    const sections = Array.isArray(sectionsResponse?.response?.data)
+                        ? sectionsResponse.response.data
+                        : [];
+
+                    return sections.map((section: IDataObject) => ({
+                        name: section.name as string,
+                        value: section.id as string,
+                    }));
+                } catch (error) {
+                    const errorObj = error as JsonObject;
+                    const errorMessage = typeof errorObj.message === 'string'
+                        ? errorObj.message
+                        : 'Unknown error occurred';
+
+                    throw new NodeApiError(this.getNode(), errorObj, {
+                        message: 'Failed to load sections',
+                        description: errorMessage,
+                    });
+                }
+            },
         },
     };
 
@@ -1057,30 +1165,38 @@ export class Fiveday implements INodeType {
                 else if (resource === 'taskActions' && operation === 'getAll') {
                     const projectId = this.getNodeParameter('projectId', i) as string;
                     const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+                    const filterBySection = this.getNodeParameter('filterBySection', i) as boolean;
 
                     const platform = 'n8n';
                     const entity = 'workitem';
 
-                    const qs: IDataObject = {
-                        projectId,
+                    const headers: IDataObject = {
+                        'Content-Type': 'application/json',
+                        'r-day5n8n-api-key': accessToken,
+                        'project-id': projectId,
                     };
 
                     if (!returnAll) {
-                        const limit = this.getNodeParameter('limit', i) as number;
-                        qs.limit = limit;
+                        const pageNum = this.getNodeParameter('pageNum', i) as number;
+                        const pageSize = this.getNodeParameter('pageSize', i) as number;
+                        headers['pageNum'] = pageNum.toString();
+                        headers['pageSize'] = pageSize.toString();
+                    }
+
+                    if (filterBySection) {
+                        const sectionId = this.getNodeParameter('sectionId', i) as string;
+                        if (sectionId) {
+                            headers['section-id'] = sectionId;
+                        }
                     }
 
                     const response = await this.helpers.httpRequest({
                         method: 'GET',
                         url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                        },
-                        qs,
+                        headers,
                     });
 
-                    const tasks = Array.isArray(response) ? response : response.data || [];
+                    const tasks = Array.isArray(response?.response?.data) ? response.response.data : [];
                     for (const task of tasks) {
                         returnData.push({ json: task as IDataObject });
                     }
