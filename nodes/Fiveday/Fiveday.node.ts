@@ -1,5 +1,5 @@
 import type {
-    IExecuteFunctions,
+	IExecuteFunctions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
@@ -10,1290 +10,504 @@ import type {
 } from 'n8n-workflow';
 import { NodeConnectionTypes, NodeApiError } from 'n8n-workflow';
 
+import { projectOperations, projectFields } from './ProjectDescription';
+import { taskOperations, taskFields } from './TaskDescription';
+import { subtaskOperations, subtaskFields } from './SubtaskDescription';
+import { taskCommentOperations, taskCommentFields } from './TaskCommentDescription';
+import { userOperations, userFields } from './UserDescription';
+import {
+	fiveDayApiRequest,
+	fiveDayApiRequestAllItems,
+	fiveDayLoadOptions,
+	formatDate,
+	validateDateRange,
+	parseStatusField,
+	applyWorkItemFields,
+} from './GenericFunctions';
+
 export class Fiveday implements INodeType {
-    description: INodeTypeDescription = {
-        displayName: '5day.io',
-        name: 'fiveday',
-        icon: 'file:5day_logo.svg',
-        group: ['transform'],
-        version: 1,
-        usableAsTool: true,
-        subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
-        description: 'Integrate with 5day project management tool',
-        defaults: {
-            name: '5day.io',
-        },
-        inputs: [NodeConnectionTypes.Main],
+	description: INodeTypeDescription = {
+		displayName: '5day.io',
+		name: 'fiveday',
+		icon: 'file:5day_logo.svg',
+		group: ['transform'],
+		version: 1,
+		usableAsTool: true,
+		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
+		description: 'Integrate with 5day.io project management tool',
+		defaults: {
+			name: '5day.io',
+		},
+		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
-        credentials: [
-            {
-                name: 'fiveDayOAuth2Api',
-                required: true,
-            },
-        ],
-        properties: [
-            // ----------------------------------------
-            //              Resource
-            // ----------------------------------------
-            {
-                displayName: 'Resource',
-                name: 'resource',
-                type: 'options',
-                noDataExpression: true,
-                options: [
-                    {
-                        name: 'Project',
-                        value: 'projectActions',
-                    },
-                    {
-                        name: 'Task',
-                        value: 'taskActions',
-                    },
-                ],
-                default: 'projectActions',
-            },
-            // ----------------------------------------
-            //         Project Actions - Operations
-            // ----------------------------------------
-            {
-                displayName: 'Operation',
-                name: 'operation',
-                type: 'options',
-                noDataExpression: true,
-                displayOptions: {
-                    show: {
-                        resource: ['projectActions'],
-                    },
-                },
-                options: [
-                    {
-                        name: 'Create',
-                        value: 'create',
-                        description: 'Create a new project',
-                        action: 'Create a project',
-                    },
-                    {
-                        name: 'Delete',
-                        value: 'delete',
-                        description: 'Delete a project',
-                        action: 'Delete a project',
-                    },
-                    {
-                        name: 'Get',
-                        value: 'get',
-                        description: 'Get a project',
-                        action: 'Get a project',
-                    },
-                    {
-                        name: 'Get Many',
-                        value: 'getAll',
-                        description: 'Get many projects',
-                        action: 'Get many projects',
-                    },
-                    {
-                        name: 'Update',
-                        value: 'update',
-                        description: 'Update a project',
-                        action: 'Update a project',
-                    },
-                ],
-                default: 'create',
-            },
-            // ----------------------------------------
-            //         Task Actions - Operations
-            // ----------------------------------------
-            {
-                displayName: 'Operation',
-                name: 'operation',
-                type: 'options',
-                noDataExpression: true,
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                    },
-                },
-                options: [
-                    {
-                        name: 'Create',
-                        value: 'create',
-                        description: 'Create a new task',
-                        action: 'Create a task',
-                    },
-                    {
-                        name: 'Delete',
-                        value: 'delete',
-                        description: 'Delete a task',
-                        action: 'Delete a task',
-                    },
-                    {
-                        name: 'Get',
-                        value: 'get',
-                        description: 'Get a task',
-                        action: 'Get a task',
-                    },
-                    {
-                        name: 'Get Many',
-                        value: 'getAll',
-                        description: 'Get many tasks',
-                        action: 'Get many tasks',
-                    },
-                    {
-                        name: 'Move',
-                        value: 'move',
-                        description: 'Move a task to another project',
-                        action: 'Move a task',
-                    },
-                    {
-                        name: 'Search',
-                        value: 'search',
-                        description: 'Search for tasks',
-                        action: 'Search for tasks',
-                    },
-                    {
-                        name: 'Update',
-                        value: 'update',
-                        description: 'Update a task',
-                        action: 'Update a task',
-                    },
-                ],
-                default: 'create',
-            },
-            // ----------------------------------------
-            //     Project Actions - Create Fields
-            // ----------------------------------------
-            {
-                displayName: 'Workspace Name or ID',
-                name: 'workspaceId',
-                type: 'options',
-                typeOptions: {
-                    loadOptionsMethod: 'getWorkspaces',
-                    loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
-                },
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['projectActions'],
-                        operation: ['create'],
-                    },
-                },
-                description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-            },
-            {
-                displayName: 'Name',
-                name: 'name',
-                type: 'string',
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['projectActions'],
-                        operation: ['create'],
-                    },
-                },
-                description: 'The name of the project to create',
-            },
-            {
-                displayName: 'Description',
-                name: 'description',
-                type: 'string',
-                typeOptions: {
-                    rows: 4,
-                },
-                default: '',
-                displayOptions: {
-                    show: {
-                        resource: ['projectActions'],
-                        operation: ['create'],
-                    },
-                },
-                description: 'Description for the project',
-            },
-            // ----------------------------------------
-            //     Project Actions - Delete Fields
-            // ----------------------------------------
-            {
-                displayName: 'Project Name or ID',
-                name: 'projectId',
-                type: 'options',
-                typeOptions: {
-                    loadOptionsMethod: 'getProjects',
-                    loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
-                },
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['projectActions'],
-                        operation: ['delete'],
-                    },
-                },
-                description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-            },
-            // ----------------------------------------
-            //     Project Actions - Get Fields
-            // ----------------------------------------
-            {
-                displayName: 'Project Name or ID',
-                name: 'projectId',
-                type: 'options',
-                typeOptions: {
-                    loadOptionsMethod: 'getProjects',
-                    loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
-                },
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['projectActions'],
-                        operation: ['get'],
-                    },
-                },
-                description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-            },
-            // ----------------------------------------
-            //     Project Actions - Get All Fields
-            // ----------------------------------------
-            {
-                displayName: 'Workspace Name or ID',
-                name: 'workspaceId',
-                type: 'options',
-                typeOptions: {
-                    loadOptionsMethod: 'getWorkspaces',
-                    loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
-                },
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['projectActions'],
-                        operation: ['getAll'],
-                    },
-                },
-                description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-            },
-            {
-                displayName: 'Return All',
-                name: 'returnAll',
-                type: 'boolean',
-                default: false,
-                displayOptions: {
-                    show: {
-                        resource: ['projectActions'],
-                        operation: ['getAll'],
-                    },
-                },
-                description: 'Whether to return all results or only up to a given limit',
-            },
-            {
-                displayName: 'Limit',
-                name: 'limit',
-                type: 'number',
-                default: 50,
-                typeOptions: {
-                    minValue: 1,
-                },
-                displayOptions: {
-                    show: {
-                        resource: ['projectActions'],
-                        operation: ['getAll'],
-                        returnAll: [false],
-                    },
-                },
-                description: 'Max number of results to return',
-            },
-            // ----------------------------------------
-            //     Project Actions - Update Fields
-            // ----------------------------------------
-            {
-                displayName: 'Project Name or ID',
-                name: 'projectId',
-                type: 'options',
-                typeOptions: {
-                    loadOptionsMethod: 'getProjects',
-                    loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
-                },
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['projectActions'],
-                        operation: ['update'],
-                    },
-                },
-                description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-            },
-            {
-                displayName: 'Update Fields',
-                name: 'updateFields',
-                type: 'collection',
-                placeholder: 'Add Field',
-                default: {},
-                displayOptions: {
-                    show: {
-                        resource: ['projectActions'],
-                        operation: ['update'],
-                    },
-                },
-                options: [
-                    {
-                        displayName: 'Name',
-                        name: 'name',
-                        type: 'string',
-                        default: '',
-                        description: 'The new name of the project',
-                    },
-                    {
-                        displayName: 'Description',
-                        name: 'description',
-                        type: 'string',
-                        typeOptions: {
-                            rows: 4,
-                        },
-                        default: '',
-                        description: 'The new description of the project',
-                    },
-                ],
-            },
-            // ----------------------------------------
-            //       Task Actions - Create Fields
-            // ----------------------------------------
-            {
-                displayName: 'Project Name or ID',
-                name: 'projectId',
-                type: 'options',
-                typeOptions: {
-                    loadOptionsMethod: 'getProjects',
-                    loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
-                },
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['create'],
-                    },
-                },
-                description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-            },
-            {
-                displayName: 'Work Item Type Name or ID',
-                name: 'workitemTypeId',
-                type: 'options',
-                typeOptions: {
-                    loadOptionsMethod: 'getWorkitemTypes',
-                    loadOptionsDependsOn: ['projectId'],
-                },
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['create'],
-                    },
-                },
-                description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-            },
-            {
-                displayName: 'Task Name',
-                name: 'taskName',
-                type: 'string',
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['create'],
-                    },
-                },
-                description: 'The name of the task to create',
-            },
-            // ----------------------------------------
-            //       Task Actions - Delete Fields
-            // ----------------------------------------
-            {
-                displayName: 'Task ID',
-                name: 'taskId',
-                type: 'string',
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['delete'],
-                    },
-                },
-                description: 'The ID of the task to delete',
-            },
-            // ----------------------------------------
-            //       Task Actions - Get Fields
-            // ----------------------------------------
-            {
-                displayName: 'Task ID',
-                name: 'taskId',
-                type: 'string',
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['get'],
-                    },
-                },
-                description: 'The ID of the task to retrieve',
-            },
-            // ----------------------------------------
-            //       Task Actions - Get All Fields
-            // ----------------------------------------
-            {
-                displayName: 'Project Name or ID',
-                name: 'projectId',
-                type: 'options',
-                typeOptions: {
-                    loadOptionsMethod: 'getProjects',
-                    loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
-                },
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['getAll'],
-                    },
-                },
-                description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-            },
-            {
-                displayName: 'Filter by Section',
-                name: 'filterBySection',
-                type: 'boolean',
-                default: false,
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['getAll'],
-                    },
-                },
-                description: 'Whether to filter tasks by a specific section',
-            },
-            {
-                displayName: 'Section Name or ID',
-                name: 'sectionId',
-                type: 'options',
-                typeOptions: {
-                    loadOptionsMethod: 'getSections',
-                    loadOptionsDependsOn: ['projectId'],
-                },
-                default: '',
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['getAll'],
-                        filterBySection: [true],
-                    },
-                },
-                description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-            },
-            {
-                displayName: 'Return All',
-                name: 'returnAll',
-                type: 'boolean',
-                default: false,
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['getAll'],
-                    },
-                },
-                description: 'Whether to return all results or only up to a given limit',
-            },
-            {
-                displayName: 'Page Number',
-                name: 'pageNum',
-                type: 'number',
-                default: 1,
-                typeOptions: {
-                    minValue: 1,
-                },
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['getAll'],
-                        returnAll: [false],
-                    },
-                },
-                description: 'The page number to retrieve',
-            },
-            {
-                displayName: 'Page Size',
-                name: 'pageSize',
-                type: 'number',
-                default: 50,
-                typeOptions: {
-                    minValue: 1,
-                },
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['getAll'],
-                        returnAll: [false],
-                    },
-                },
-                description: 'Number of records per page',
-            },
-            // ----------------------------------------
-            //       Task Actions - Move Fields
-            // ----------------------------------------
-            {
-                displayName: 'Task ID',
-                name: 'taskId',
-                type: 'string',
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['move'],
-                    },
-                },
-                description: 'The ID of the task to move',
-            },
-            {
-                displayName: 'Target Project Name or ID',
-                name: 'targetProjectId',
-                type: 'options',
-                typeOptions: {
-                    loadOptionsMethod: 'getProjects',
-                    loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
-                },
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['move'],
-                    },
-                },
-                description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-            },
-            // ----------------------------------------
-            //       Task Actions - Search Fields
-            // ----------------------------------------
-            {
-                displayName: 'Search Query',
-                name: 'searchQuery',
-                type: 'string',
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['search'],
-                    },
-                },
-                description: 'The search query to find tasks',
-            },
-            {
-                displayName: 'Project Name or ID',
-                name: 'projectId',
-                type: 'options',
-                typeOptions: {
-                    loadOptionsMethod: 'getProjects',
-                    loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
-                },
-                default: '',
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['search'],
-                    },
-                },
-                description: 'Optionally filter by project. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-            },
-            // ----------------------------------------
-            //       Task Actions - Update Fields
-            // ----------------------------------------
-            {
-                displayName: 'Task ID',
-                name: 'taskId',
-                type: 'string',
-                default: '',
-                required: true,
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['update'],
-                    },
-                },
-                description: 'The ID of the task to update',
-            },
-            {
-                displayName: 'Update Fields',
-                name: 'updateFields',
-                type: 'collection',
-                placeholder: 'Add Field',
-                default: {},
-                displayOptions: {
-                    show: {
-                        resource: ['taskActions'],
-                        operation: ['update'],
-                    },
-                },
-                options: [
-                    {
-                        displayName: 'Description',
-                        name: 'description',
-                        type: 'string',
-                        typeOptions: {
-                            rows: 4,
-                        },
-                        default: '',
-                        description: 'The new description of the task',
-                    },
-                    {
-                        displayName: 'Due Date',
-                        name: 'dueDate',
-                        type: 'dateTime',
-                        default: '',
-                        description: 'The due date of the task',
-                    },
-                    {
-                        displayName: 'Name',
-                        name: 'name',
-                        type: 'string',
-                        default: '',
-                        description: 'The new name of the task',
-                    },
-                    {
-                        displayName: 'Priority',
-                        name: 'priority',
-                        type: 'options',
-                        options: [
-                            {
-                                name: 'Low',
-                                value: 'low',
-                            },
-                            {
-                                name: 'Medium',
-                                value: 'medium',
-                            },
-                            {
-                                name: 'High',
-                                value: 'high',
-                            },
-                        ],
-                        default: 'medium',
-                        description: 'The priority of the task',
-                    },
-                    {
-                        displayName: 'Status',
-                        name: 'status',
-                        type: 'options',
-                        options: [
-                            {
-                                name: 'To Do',
-                                value: 'todo',
-                            },
-                            {
-                                name: 'In Progress',
-                                value: 'inProgress',
-                            },
-                            {
-                                name: 'Done',
-                                value: 'done',
-                            },
-                        ],
-                        default: 'todo',
-                        description: 'The new status of the task',
-                    },
-                ],
-            },
-        ],
-    };
-
-    methods = {
-        loadOptions: {
-            // Get all the available workspaces to display them to user
-            async getWorkspaces(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-                const credentials = await this.getCredentials('fiveDayOAuth2Api').catch(() => null);
-
-                if (!credentials || !credentials.oauthTokenData) {
-                    return []; // OAuth2 not connected yet
-                }
-
-                // Get access token from OAuth data
-                const oauthTokenData = credentials.oauthTokenData as IDataObject;
-                const accessToken = oauthTokenData.access_token as string;
-
-                if (!accessToken) {
-                    return []; // No access token available
-                }
-
-                // const baseUrl = 'https://gateway.dev.5daylabs.com';
-                const baseUrl = 'http://localhost:41060';
-                const platform = 'n8n';
-                const entity = 'workspace';
-
-                try {
-                    const workspacesResponse = await this.helpers.httpRequest({
-                        method: 'GET',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                        },
-                    });
-
-                    const workspaces = Array.isArray(workspacesResponse?.response?.data)
-                        ? workspacesResponse.response.data
-                        : [];
-
-                    return workspaces.map((workspace: IDataObject) => ({
-                        name: workspace.name as string,
-                        value: workspace.id as string,
-                    }));
-                } catch (error) {
-                    const errorObj = error as JsonObject;
-                    const errorMessage = typeof errorObj.message === 'string'
-                        ? errorObj.message
-                        : 'Unknown error occurred';
-
-                    throw new NodeApiError(this.getNode(), errorObj, {
-                        message: 'Failed to load workspaces',
-                        description: errorMessage,
-                    });
-                }
-            },
-
-            // Get all the available projects to display them to user
-            async getProjects(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-                const credentials = await this.getCredentials('fiveDayOAuth2Api').catch(() => null);
-
-                if (!credentials || !credentials.oauthTokenData || Object.keys(credentials.oauthTokenData).length === 0) {
-                    return []; // OAuth2 not connected yet
-                }
-
-                // Get access token from OAuth data
-                const oauthTokenData = credentials.oauthTokenData as IDataObject;
-                const accessToken = oauthTokenData.access_token as string;
-
-                if (!accessToken) {
-                    return []; // No access token available
-                }
-
-                // const baseUrl = 'https://gateway.dev.5daylabs.com';
-                const baseUrl = 'http://localhost:41060';
-                const platform = 'n8n';
-                const entity = 'project';
-
-                try {
-                    const projectsResponse = await this.helpers.httpRequest({
-                        method: 'GET',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                        },
-                    });
-
-                    const projects = Array.isArray(projectsResponse?.response?.data)
-                        ? projectsResponse.response.data
-                        : [];
-
-                    return projects.map((project: IDataObject) => ({
-                        name: project.name as string,
-                        value: project.id as string,
-                    }));
-                } catch (error) {
-                    const errorObj = error as JsonObject;
-                    const errorMessage = typeof errorObj.message === 'string'
-                        ? errorObj.message
-                        : 'Unknown error occurred';
-
-                    throw new NodeApiError(this.getNode(), errorObj, {
-                        message: 'Failed to load projects',
-                        description: errorMessage,
-                    });
-                }
-            },
-
-            // Get all available workitem types for a project
-            async getWorkitemTypes(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-                const credentials = await this.getCredentials('fiveDayOAuth2Api').catch(() => null);
-
-                if (!credentials || !credentials.oauthTokenData || Object.keys(credentials.oauthTokenData).length === 0) {
-                    return []; // OAuth2 not connected yet
-                }
-
-                // Get access token from OAuth data
-                const oauthTokenData = credentials.oauthTokenData as IDataObject;
-                const accessToken = oauthTokenData.access_token as string;
-
-                if (!accessToken) {
-                    return []; // No access token available
-                }
-
-                // Get the selected project ID
-                const projectId = this.getCurrentNodeParameter('projectId') as string;
-
-                if (!projectId) {
-                    return []; // No project selected yet
-                }
-
-                // const baseUrl = 'https://gateway.dev.5daylabs.com';
-                const baseUrl = 'http://localhost:41060';
-                const platform = 'n8n';
-                const entity = 'workitemtype';
-
-                try {
-                    const workitemTypesResponse = await this.helpers.httpRequest({
-                        method: 'GET',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                            'project-id': projectId,
-                        },
-                    });
-
-                    const workitemTypes = Array.isArray(workitemTypesResponse?.response?.data)
-                        ? workitemTypesResponse.response.data
-                        : [];
-
-                    return workitemTypes.map((workitemType: IDataObject) => ({
-                        name: workitemType.name as string,
-                        value: workitemType.id as string,
-                    }));
-                } catch (error) {
-                    const errorObj = error as JsonObject;
-                    const errorMessage = typeof errorObj.message === 'string'
-                        ? errorObj.message
-                        : 'Unknown error occurred';
-
-                    throw new NodeApiError(this.getNode(), errorObj, {
-                        message: 'Failed to load workitem types',
-                        description: errorMessage,
-                    });
-                }
-            },
-
-            // Get all available sections for a project
-            async getSections(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-                const credentials = await this.getCredentials('fiveDayOAuth2Api').catch(() => null);
-
-                if (!credentials || !credentials.oauthTokenData || Object.keys(credentials.oauthTokenData).length === 0) {
-                    return []; // OAuth2 not connected yet
-                }
-
-                // Get access token from OAuth data
-                const oauthTokenData = credentials.oauthTokenData as IDataObject;
-                const accessToken = oauthTokenData.access_token as string;
-
-                if (!accessToken) {
-                    return []; // No access token available
-                }
-
-                // Get the selected project ID
-                const projectId = this.getCurrentNodeParameter('projectId') as string;
-
-                if (!projectId) {
-                    return []; // No project selected yet
-                }
-
-                // const baseUrl = 'https://gateway.dev.5daylabs.com';
-                const baseUrl = 'http://localhost:41060';
-                const platform = 'n8n';
-                const entity = 'section';
-
-                try {
-                    const sectionsResponse = await this.helpers.httpRequest({
-                        method: 'GET',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                            'project-id': projectId,
-                        },
-                    });
-
-                    const sections = Array.isArray(sectionsResponse?.response?.data)
-                        ? sectionsResponse.response.data
-                        : [];
-
-                    return sections.map((section: IDataObject) => ({
-                        name: section.name as string,
-                        value: section.id as string,
-                    }));
-                } catch (error) {
-                    const errorObj = error as JsonObject;
-                    const errorMessage = typeof errorObj.message === 'string'
-                        ? errorObj.message
-                        : 'Unknown error occurred';
-
-                    throw new NodeApiError(this.getNode(), errorObj, {
-                        message: 'Failed to load sections',
-                        description: errorMessage,
-                    });
-                }
-            },
-        },
-    };
-
-    async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-        const items = this.getInputData();
-        const returnData: INodeExecutionData[] = [];
-
-        const resource = this.getNodeParameter('resource', 0) as string;
-        const operation = this.getNodeParameter('operation', 0) as string;
-        // const baseUrl = 'https://gateway.dev.5daylabs.com';
-        const baseUrl = 'http://localhost:41060';
-
-        // Get access token from credentials
-        const credentials = await this.getCredentials('fiveDayOAuth2Api');
-        const oauthTokenData = credentials.oauthTokenData as IDataObject;
-        const accessToken = oauthTokenData.access_token as string;
-
-        for (let i = 0; i < items.length; i++) {
-            try {
-                // ----------------------------------------
-                //         Project Actions - Create
-                // ----------------------------------------
-                if (resource === 'projectActions' && operation === 'create') {
-                    const workspaceId = this.getNodeParameter('workspaceId', i) as string;
-                    const name = this.getNodeParameter('name', i) as string;
-                    const description = this.getNodeParameter('description', i) as string;
-                    const projectWorkflow = true;
-
-                    const body: IDataObject = {
-                        name,
-                        description,
-                        projectWorkflow,
-                    };
-
-                    const platform = 'n8n';
-                    const entity = 'project';
-
-                    const projectResponse = await this.helpers.httpRequest({
-                        method: 'POST',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                            'workspace-id': workspaceId,
-                            'action': 'create',
-                        },
-                        body,
-                    });
-
-                    returnData.push({ json: projectResponse as IDataObject });
-                }
-                // ----------------------------------------
-                //         Project Actions - Delete
-                // ----------------------------------------
-                else if (resource === 'projectActions' && operation === 'delete') {
-                    const projectId = this.getNodeParameter('projectId', i) as string;
-
-                    const platform = 'n8n';
-                    const entity = 'project';
-
-                    const response = await this.helpers.httpRequest({
-                        method: 'DELETE',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}/${projectId}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                            'action': 'delete',
-                        },
-                    });
-
-                    returnData.push({ json: response as IDataObject });
-                }
-                // ----------------------------------------
-                //         Project Actions - Get
-                // ----------------------------------------
-                else if (resource === 'projectActions' && operation === 'get') {
-                    const projectId = this.getNodeParameter('projectId', i) as string;
-
-                    const platform = 'n8n';
-                    const entity = 'project';
-
-                    const response = await this.helpers.httpRequest({
-                        method: 'GET',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}/${projectId}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                        },
-                    });
-
-                    returnData.push({ json: response as IDataObject });
-                }
-                // ----------------------------------------
-                //         Project Actions - Get All
-                // ----------------------------------------
-                else if (resource === 'projectActions' && operation === 'getAll') {
-                    const workspaceId = this.getNodeParameter('workspaceId', i) as string;
-                    const returnAll = this.getNodeParameter('returnAll', i) as boolean;
-
-                    const platform = 'n8n';
-                    const entity = 'project';
-
-                    const qs: IDataObject = {};
-
-                    if (!returnAll) {
-                        const limit = this.getNodeParameter('limit', i) as number;
-                        qs.limit = limit;
-                    }
-
-                    const response = await this.helpers.httpRequest({
-                        method: 'GET',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                            'workspace-id': workspaceId,
-                        },
-                        qs,
-                    });
-
-                    const projects = Array.isArray(response) ? response : response.data || [];
-                    for (const project of projects) {
-                        returnData.push({ json: project as IDataObject });
-                    }
-                }
-                // ----------------------------------------
-                //         Project Actions - Update
-                // ----------------------------------------
-                else if (resource === 'projectActions' && operation === 'update') {
-                    const projectId = this.getNodeParameter('projectId', i) as string;
-                    const updateFields = this.getNodeParameter('updateFields', i) as IDataObject;
-
-                    const platform = 'n8n';
-                    const entity = 'project';
-
-                    const body: IDataObject = {
-                        ...updateFields,
-                    };
-
-                    const response = await this.helpers.httpRequest({
-                        method: 'PATCH',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}/${projectId}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                            'action': 'update',
-                        },
-                        body,
-                    });
-
-                    returnData.push({ json: response as IDataObject });
-                }
-                // ----------------------------------------
-                //           Task Actions - Create
-                // ----------------------------------------
-                else if (resource === 'taskActions' && operation === 'create') {
-                    const projectId = this.getNodeParameter('projectId', i) as string;
-                    const taskTypeId = this.getNodeParameter('workitemTypeId', i) as string;
-                    const taskName = this.getNodeParameter('taskName', i) as string;
-
-                    const body: IDataObject = {
-                        name: taskName,
-                        projectId,
-                        taskTypeId,
-                    };
-
-                    const platform = 'n8n';
-                    const entity = 'workitem';
-
-                    const taskResponse = await this.helpers.httpRequest({
-                        method: 'POST',
-                        url: `${baseUrl}/api/integration-service/v1/execution/${platform}/event/${entity}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                            'action': 'create',
-                        },
-                        body,
-                    });
-
-                    returnData.push({ json: taskResponse as IDataObject });
-                }
-                // ----------------------------------------
-                //           Task Actions - Delete
-                // ----------------------------------------
-                else if (resource === 'taskActions' && operation === 'delete') {
-                    const taskId = this.getNodeParameter('taskId', i) as string;
-
-                    const platform = 'n8n';
-                    const entity = 'workitem';
-
-                    const response = await this.helpers.httpRequest({
-                        method: 'DELETE',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}/${taskId}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                            'action': 'delete',
-                        },
-                    });
-
-                    returnData.push({ json: response as IDataObject });
-                }
-                // ----------------------------------------
-                //           Task Actions - Get
-                // ----------------------------------------
-                else if (resource === 'taskActions' && operation === 'get') {
-                    const taskId = this.getNodeParameter('taskId', i) as string;
-
-                    const platform = 'n8n';
-                    const entity = 'workitem';
-
-                    const response = await this.helpers.httpRequest({
-                        method: 'GET',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}/${taskId}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                        },
-                    });
-
-                    returnData.push({ json: response as IDataObject });
-                }
-                // ----------------------------------------
-                //           Task Actions - Get All
-                // ----------------------------------------
-                else if (resource === 'taskActions' && operation === 'getAll') {
-                    const projectId = this.getNodeParameter('projectId', i) as string;
-                    const returnAll = this.getNodeParameter('returnAll', i) as boolean;
-                    const filterBySection = this.getNodeParameter('filterBySection', i) as boolean;
-
-                    const platform = 'n8n';
-                    const entity = 'workitem';
-
-                    const headers: IDataObject = {
-                        'Content-Type': 'application/json',
-                        'r-day5n8n-api-key': accessToken,
-                        'project-id': projectId,
-                    };
-
-                    if (!returnAll) {
-                        const pageNum = this.getNodeParameter('pageNum', i) as number;
-                        const pageSize = this.getNodeParameter('pageSize', i) as number;
-                        headers['pageNum'] = pageNum.toString();
-                        headers['pageSize'] = pageSize.toString();
-                    }
-
-                    if (filterBySection) {
-                        const sectionId = this.getNodeParameter('sectionId', i) as string;
-                        if (sectionId) {
-                            headers['section-id'] = sectionId;
-                        }
-                    }
-
-                    const response = await this.helpers.httpRequest({
-                        method: 'GET',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}`,
-                        headers,
-                    });
-
-                    const tasks = Array.isArray(response?.response?.data) ? response.response.data : [];
-                    for (const task of tasks) {
-                        returnData.push({ json: task as IDataObject });
-                    }
-                }
-                // ----------------------------------------
-                //           Task Actions - Move
-                // ----------------------------------------
-                else if (resource === 'taskActions' && operation === 'move') {
-                    const taskId = this.getNodeParameter('taskId', i) as string;
-                    const targetProjectId = this.getNodeParameter('targetProjectId', i) as string;
-
-                    const platform = 'n8n';
-                    const entity = 'workitem';
-
-                    const body: IDataObject = {
-                        taskId,
-                        targetProjectId,
-                    };
-
-                    const response = await this.helpers.httpRequest({
-                        method: 'POST',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}/move`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                            'action': 'update',
-                        },
-                        body,
-                    });
-
-                    returnData.push({ json: response as IDataObject });
-                }
-                // ----------------------------------------
-                //           Task Actions - Search
-                // ----------------------------------------
-                else if (resource === 'taskActions' && operation === 'search') {
-                    const searchQuery = this.getNodeParameter('searchQuery', i) as string;
-                    const projectId = this.getNodeParameter('projectId', i) as string;
-
-                    const platform = 'n8n';
-                    const entity = 'workitem';
-
-                    const qs: IDataObject = {
-                        q: searchQuery,
-                    };
-
-                    if (projectId) {
-                        qs.projectId = projectId;
-                    }
-
-                    const response = await this.helpers.httpRequest({
-                        method: 'GET',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}/search`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                        },
-                        qs,
-                    });
-
-                    const tasks = Array.isArray(response) ? response : response.data || [];
-                    for (const task of tasks) {
-                        returnData.push({ json: task as IDataObject });
-                    }
-                }
-                // ----------------------------------------
-                //           Task Actions - Update
-                // ----------------------------------------
-                else if (resource === 'taskActions' && operation === 'update') {
-                    const taskId = this.getNodeParameter('taskId', i) as string;
-                    const updateFields = this.getNodeParameter('updateFields', i) as IDataObject;
-
-                    const platform = 'n8n';
-                    const entity = 'workitem';
-
-                    const body: IDataObject = {
-                        ...updateFields,
-                    };
-
-                    const response = await this.helpers.httpRequest({
-                        method: 'PATCH',
-                        url: `${baseUrl}/api/integration-service/v1/data/${platform}/${entity}/${taskId}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'r-day5n8n-api-key': accessToken,
-                            'action': 'update',
-                        },
-                        body,
-                    });
-
-                    returnData.push({ json: response as IDataObject });
-                }
-            } catch (error) {
-                throw new NodeApiError(this.getNode(), error as JsonObject);
-            }
-        }
-
-        return [returnData as INodeExecutionData[]];
-    }
+		credentials: [
+			{
+				name: 'fiveDayOAuth2Api',
+				required: true,
+			},
+		],
+		properties: [
+			{
+				displayName: 'Resource',
+				name: 'resource',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+					{
+						name: 'Project',
+						value: 'project',
+					},
+					{
+						name: 'Subtask',
+						value: 'subtask',
+					},
+					{
+						name: 'Task',
+						value: 'task',
+					},
+					{
+						name: 'Task Comment',
+						value: 'taskComment',
+					},
+					{
+						name: 'User',
+						value: 'user',
+					},
+				],
+				default: 'project',
+			},
+			projectOperations,
+			taskOperations,
+			subtaskOperations,
+			taskCommentOperations,
+			userOperations,
+			...projectFields,
+			...taskFields,
+			...subtaskFields,
+			...taskCommentFields,
+			...userFields,
+		],
+	};
+
+	methods = {
+		loadOptions: {
+			async getWorkspaces(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				return fiveDayLoadOptions.call(this, 'workspace');
+			},
+
+			async getSpaces(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const workspaceId = this.getCurrentNodeParameter('workspaceId') as string;
+				if (!workspaceId) return [];
+				return fiveDayLoadOptions.call(this, 'space', { 'workspace-id': workspaceId });
+			},
+
+			async getProjects(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				return fiveDayLoadOptions.call(this, 'project');
+			},
+
+			async getWorkitemTypes(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const projectId = this.getCurrentNodeParameter('projectId') as string;
+				if (!projectId) return [];
+				return fiveDayLoadOptions.call(this, 'workitemtype', { 'project-id': projectId });
+			},
+
+			async getSections(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const projectId = this.getCurrentNodeParameter('projectId') as string;
+				if (!projectId) return [];
+				return fiveDayLoadOptions.call(this, 'section', { 'project-id': projectId });
+			},
+
+			async getTasks(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const projectId = this.getCurrentNodeParameter('projectId') as string;
+				if (!projectId) return [];
+				return fiveDayLoadOptions.call(this, 'workitem', { 'project-id': projectId });
+			},
+
+			async getClients(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const workspaceId = this.getCurrentNodeParameter('workspaceId') as string;
+				if (!workspaceId) return [];
+				return fiveDayLoadOptions.call(this, 'clients', { 'workspace-id': workspaceId });
+			},
+
+			async getPriorities(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const workspaceId = this.getCurrentNodeParameter('workspaceId') as string;
+				if (!workspaceId) return [];
+				return fiveDayLoadOptions.call(this, 'priorities', { 'workspace-id': workspaceId });
+			},
+
+			async getStatuses(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const workspaceId = this.getCurrentNodeParameter('workspaceId') as string;
+				if (!workspaceId) return [];
+				return fiveDayLoadOptions.call(
+					this,
+					'workitemstatus',
+					{ 'workspace-id': workspaceId },
+					'name',
+					'id',
+					(status: IDataObject) =>
+						JSON.stringify({
+							statusId: status.id,
+							stage: status.stage,
+							projectWorkflowId: status.workflowId,
+						}),
+				);
+			},
+
+			async getUsers(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const projectId = this.getCurrentNodeParameter('projectId') as string;
+				if (!projectId) return [];
+				return fiveDayLoadOptions.call(this, 'users', { 'project-id': projectId }, 'fullName');
+			},
+
+			async getTags(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const projectId = this.getCurrentNodeParameter('projectId') as string;
+				if (!projectId) return [];
+				return fiveDayLoadOptions.call(this, 'tags', { 'project-id': projectId });
+			},
+
+			async getTaskPriorities(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const projectId = this.getCurrentNodeParameter('projectId') as string;
+				if (!projectId) return [];
+				return fiveDayLoadOptions.call(this, 'priorities', { 'project-id': projectId });
+			},
+
+			async getTaskStatuses(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const projectId = this.getCurrentNodeParameter('projectId') as string;
+				if (!projectId) return [];
+				return fiveDayLoadOptions.call(
+					this,
+					'workitemstatus',
+					{ 'project-id': projectId },
+					'name',
+					'id',
+					(status: IDataObject) =>
+						JSON.stringify({
+							statusId: status.id,
+							stage: status.stage,
+							projectWorkflowId: status.workflowId,
+						}),
+				);
+			},
+		},
+	};
+
+	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+		const items = this.getInputData();
+		const returnData: INodeExecutionData[] = [];
+
+		const resource = this.getNodeParameter('resource', 0) as string;
+		const operation = this.getNodeParameter('operation', 0) as string;
+
+		for (let i = 0; i < items.length; i++) {
+			try {
+				if (resource === 'project') {
+					if (operation === 'create') {
+						const result = await executeProjectCreate.call(this, i);
+						returnData.push({ json: result.json as IDataObject, pairedItem: { item: i } });
+					} else if (operation === 'getAll') {
+						const results = await executeProjectGetAll.call(this, i);
+						returnData.push(...results.map((r) => ({ json: r.json as IDataObject, pairedItem: { item: i } })));
+					}
+				} else if (resource === 'task') {
+					if (operation === 'create') {
+						const result = await executeTaskCreate.call(this, i);
+						returnData.push({ json: result.json as IDataObject, pairedItem: { item: i } });
+					} else if (operation === 'getAll') {
+						const results = await executeTaskGetAll.call(this, i);
+						returnData.push(...results.map((r) => ({ json: r.json as IDataObject, pairedItem: { item: i } })));
+					} else if (operation === 'search') {
+						const results = await executeTaskSearch.call(this, i);
+						returnData.push(...results.map((r) => ({ json: r.json as IDataObject, pairedItem: { item: i } })));
+					}
+				} else if (resource === 'subtask') {
+					if (operation === 'create') {
+						const result = await executeSubtaskCreate.call(this, i);
+						returnData.push({ json: result.json as IDataObject, pairedItem: { item: i } });
+					} else if (operation === 'getAll') {
+						const results = await executeSubtaskGetAll.call(this, i);
+						returnData.push(...results.map((r) => ({ json: r.json as IDataObject, pairedItem: { item: i } })));
+					}
+				} else if (resource === 'taskComment') {
+					if (operation === 'create') {
+						const result = await executeTaskCommentCreate.call(this, i);
+						returnData.push({ json: result.json as IDataObject, pairedItem: { item: i } });
+					}
+				} else if (resource === 'user') {
+					if (operation === 'getAll') {
+						const results = await executeUserGetAll.call(this, i);
+						returnData.push(...results.map((r) => ({ json: r.json as IDataObject, pairedItem: { item: i } })));
+					}
+				}
+			} catch (error) {
+				if (this.continueOnFail()) {
+					returnData.push({
+						json: { error: (error as Error).message },
+						pairedItem: { item: i },
+					});
+					continue;
+				}
+				throw new NodeApiError(this.getNode(), error as JsonObject);
+			}
+		}
+
+		return [returnData];
+	}
+}
+
+// ------------------------------------------------------------------
+//                    Project Operations
+// ------------------------------------------------------------------
+
+async function executeProjectCreate(this: IExecuteFunctions, i: number): Promise<IDataObject> {
+	const workspaceId = this.getNodeParameter('workspaceId', i) as string;
+	const name = this.getNodeParameter('name', i) as string;
+	const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
+
+	const body: IDataObject = {
+		name,
+		projectWorkflow: true,
+	};
+
+	const headers: IDataObject = {
+		'workspace-id': workspaceId,
+		action: 'create',
+	};
+
+	if (additionalFields.spaceId) {
+		headers['space-id'] = additionalFields.spaceId as string;
+	}
+
+	if (additionalFields.description) {
+		body.description = additionalFields.description as string;
+	}
+
+	if (additionalFields.budgetType) {
+		body.budgetType = additionalFields.budgetType as string;
+	}
+
+	if (additionalFields.startDate) {
+		body.startDate = formatDate(additionalFields.startDate as string);
+	}
+
+	if (additionalFields.endDate) {
+		validateDateRange(
+			additionalFields.startDate as string | undefined,
+			additionalFields.endDate as string,
+			'End date',
+		);
+		body.endDate = formatDate(additionalFields.endDate as string);
+	}
+
+	if (additionalFields.progress) {
+		body.progress = additionalFields.progress as number;
+	}
+
+	if (additionalFields.prefix) {
+		body.prefix = additionalFields.prefix as string;
+	}
+
+	if (additionalFields.clientId) {
+		body.clientId = additionalFields.clientId as string;
+	}
+
+	if (additionalFields.prioritiesId) {
+		body.prioritiesId = additionalFields.prioritiesId as string;
+	}
+
+	if (additionalFields.statusId) {
+		const statusData = parseStatusField(additionalFields.statusId as string);
+		body.workItemStatusId = statusData.statusId;
+		if (statusData.stage !== undefined) {
+			body.stage = statusData.stage;
+		}
+		if (statusData.projectWorkflowId !== undefined) {
+			body.projectWorkflowId = statusData.projectWorkflowId;
+		}
+	}
+
+	const response = await fiveDayApiRequest.call(this, 'POST', 'project', body, headers, true);
+	return { json: response.data as IDataObject };
+}
+
+async function executeProjectGetAll(this: IExecuteFunctions, i: number): Promise<IDataObject[]> {
+	const workspaceId = this.getNodeParameter('workspaceId', i) as string;
+	const filterBySpace = this.getNodeParameter('filterBySpace', i) as boolean;
+	const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+	const limit = this.getNodeParameter('limit', i, 50) as number;
+
+	const headers: IDataObject = {
+		'workspace-id': workspaceId,
+	};
+
+	if (filterBySpace) {
+		const spaceId = this.getNodeParameter('spaceId', i) as string;
+		if (spaceId) headers['space-id'] = spaceId;
+	}
+
+	const results = await fiveDayApiRequestAllItems.call(this, 'project', headers, returnAll, limit);
+	return results.map((item) => ({ json: item }));
+}
+
+// ------------------------------------------------------------------
+//                    Task Operations
+// ------------------------------------------------------------------
+
+async function executeTaskCreate(this: IExecuteFunctions, i: number): Promise<IDataObject> {
+	const projectId = this.getNodeParameter('projectId', i) as string;
+	const taskTypeId = this.getNodeParameter('workitemTypeId', i) as string;
+	const taskName = this.getNodeParameter('taskName', i) as string;
+	const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
+
+	const body: IDataObject = {
+		name: taskName,
+		projectId,
+		taskTypeId,
+	};
+
+	const headers: IDataObject = {
+		action: 'create',
+	};
+
+	applyWorkItemFields(body, additionalFields);
+
+	if (additionalFields.assignee && Array.isArray(additionalFields.assignee) && (additionalFields.assignee as string[]).length > 0) {
+		body.assignee = additionalFields.assignee as string[];
+	}
+
+	const response = await fiveDayApiRequest.call(this, 'POST', 'workitem', body, headers, true);
+	return { json: response.data as IDataObject };
+}
+
+async function executeTaskGetAll(this: IExecuteFunctions, i: number): Promise<IDataObject[]> {
+	const projectId = this.getNodeParameter('projectId', i) as string;
+	const filterBySection = this.getNodeParameter('filterBySection', i) as boolean;
+	const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+	const limit = this.getNodeParameter('limit', i, 50) as number;
+
+	const headers: IDataObject = {
+		'project-id': projectId,
+	};
+
+	if (filterBySection) {
+		const sectionId = this.getNodeParameter('sectionId', i) as string;
+		if (sectionId) headers['section-id'] = sectionId;
+	}
+
+	const results = await fiveDayApiRequestAllItems.call(this, 'workitem', headers, returnAll, limit);
+	return results.map((item) => ({ json: item }));
+}
+
+async function executeTaskSearch(this: IExecuteFunctions, i: number): Promise<IDataObject[]> {
+	const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+	const searchQuery = this.getNodeParameter('searchQuery', i) as string;
+	const limit = this.getNodeParameter('limit', i, 50) as number;
+
+	const headers: IDataObject = {
+		searchText: searchQuery,
+	};
+
+	const results = await fiveDayApiRequestAllItems.call(this, 'workitemsearch', headers, returnAll, limit);
+	return results.map((item) => ({ json: item }));
+}
+
+// ------------------------------------------------------------------
+//                    Subtask Operations
+// ------------------------------------------------------------------
+
+async function executeSubtaskCreate(this: IExecuteFunctions, i: number): Promise<IDataObject> {
+	const projectId = this.getNodeParameter('projectId', i) as string;
+	const taskTypeId = this.getNodeParameter('workitemTypeId', i) as string;
+	const parentTaskId = this.getNodeParameter('parentTaskId', i) as string;
+	const taskName = this.getNodeParameter('taskName', i) as string;
+	const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
+
+	const body: IDataObject = {
+		name: taskName,
+		projectId,
+		taskTypeId,
+		parentTaskId,
+	};
+
+	const headers: IDataObject = {
+		action: 'create',
+	};
+
+	applyWorkItemFields(body, additionalFields);
+
+	if (additionalFields.assignee) {
+		body.assignee = [additionalFields.assignee as string];
+	}
+
+	const response = await fiveDayApiRequest.call(this, 'POST', 'workitem', body, headers, true);
+	return { json: response.data as IDataObject };
+}
+
+async function executeSubtaskGetAll(this: IExecuteFunctions, i: number): Promise<IDataObject[]> {
+	const projectId = this.getNodeParameter('projectId', i) as string;
+	const parentTaskId = this.getNodeParameter('parentTaskId', i) as string;
+	const filterBySection = this.getNodeParameter('filterBySection', i) as boolean;
+	const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+	const limit = this.getNodeParameter('limit', i, 50) as number;
+
+	const headers: IDataObject = {
+		'project-id': projectId,
+		'parent-id': parentTaskId,
+	};
+
+	if (filterBySection) {
+		const sectionId = this.getNodeParameter('sectionId', i) as string;
+		if (sectionId) headers['section-id'] = sectionId;
+	}
+
+	const results = await fiveDayApiRequestAllItems.call(this, 'workitem', headers, returnAll, limit);
+	return results.map((item) => ({ json: item }));
+}
+
+// ------------------------------------------------------------------
+//                    Task Comment Operations
+// ------------------------------------------------------------------
+
+async function executeTaskCommentCreate(this: IExecuteFunctions, i: number): Promise<IDataObject> {
+	const projectId = this.getNodeParameter('projectId', i) as string;
+	const workitemId = this.getNodeParameter('workitemId', i) as string;
+	const messageBody = this.getNodeParameter('messageBody', i) as string;
+
+	const body: IDataObject = {
+		messageBody,
+		projectId,
+		workitemId,
+	};
+
+	const headers: IDataObject = {
+		action: 'create',
+	};
+
+	const response = await fiveDayApiRequest.call(this, 'POST', 'workitemcomment', body, headers, true);
+	return { json: response.data as IDataObject };
+}
+
+// ------------------------------------------------------------------
+//                    User Operations
+// ------------------------------------------------------------------
+
+async function executeUserGetAll(this: IExecuteFunctions, i: number): Promise<IDataObject[]> {
+	const filterByWorkspace = this.getNodeParameter('filterByWorkspace', i) as boolean;
+	const filterByProject = this.getNodeParameter('filterByProject', i) as boolean;
+	const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+	const limit = this.getNodeParameter('limit', i, 50) as number;
+
+	const headers: IDataObject = {};
+
+	if (filterByWorkspace) {
+		const workspaceId = this.getNodeParameter('workspaceId', i) as string;
+		if (workspaceId) headers['workspace-id'] = workspaceId;
+	}
+
+	if (filterByProject) {
+		const projectId = this.getNodeParameter('projectId', i) as string;
+		if (projectId) headers['project-id'] = projectId;
+	}
+
+	const results = await fiveDayApiRequestAllItems.call(this, 'users', headers, returnAll, limit);
+	return results.map((item) => ({ json: item }));
 }

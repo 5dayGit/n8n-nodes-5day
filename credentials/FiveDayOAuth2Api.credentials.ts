@@ -13,7 +13,7 @@ export class FiveDayOAuth2Api implements ICredentialType {
 
 	displayName = '5day OAuth2 API';
 
-	documentationUrl = 'https://google.com';
+	documentationUrl = 'https://docs.5day.io/integrations/n8n';
 
 	properties: INodeProperties[] = [
 		{
@@ -27,6 +27,7 @@ export class FiveDayOAuth2Api implements ICredentialType {
 			name: 'authUrl',
 			type: 'hidden',
 			// default: 'https://login.5day.dev.5daylabs.com/api/login',
+			// default: 'https://login.5day.qa.5daylabs.com/api/login',
 			default: 'http://login.localhost:4200/auth/login',
 			required: true,
 		},
@@ -35,23 +36,28 @@ export class FiveDayOAuth2Api implements ICredentialType {
 			name: 'accessTokenUrl',
 			type: 'hidden',
 			// default: 'https://gateway.dev.5daylabs.com/api/integration/auth/external/n8n/authorize',
+			// default: 'https://gateway.qa.5daylabs.com/api/integration/auth/external/n8n/authorize',
 			default: 'http://localhost:41060/api/security/integration/auth/external/n8n/authorize',
 			required: true,
 		},
 		{
 			displayName: 'Client ID',
 			name: 'clientId',
-			type: 'hidden',
-			default: 'n8n_9f3c2a7e4d1b6a8c5e0f2b9d7c1a4e6f',
+			type: 'string',
+			default: '',
+			required: true,
+			description: 'The Client ID generated from your 5day.io application integration settings',
 		},
 		{
 			displayName: 'Client Secret',
 			name: 'clientSecret',
-			type: 'hidden',
+			type: 'string',
 			typeOptions: {
 				password: true,
 			},
-			default: 'bR7ZkQ9FvT2xP0A6mLJ8yN4E5wHcD1u3SsaKXGQeC0R',
+			default: '',
+			required: true,
+			description: 'The Client Secret generated from your 5day.io application integration settings',
 		},
 		{
 			displayName: 'Scope',
@@ -72,12 +78,11 @@ export class FiveDayOAuth2Api implements ICredentialType {
 			default: 'body',
 		},
 	];
-
-	// Let n8n's built-in oAuth2Api handle the Authorization: Bearer token automatically
-
+	
 	test: ICredentialTestRequest = {
 		request: {
 			// baseURL: 'https://gateway.dev.5daylabs.com',
+			// baseURL: 'https://gateway.qa.5daylabs.com',
 			baseURL: 'http://localhost:41060',
 			url: '/api/integration-service/v1/data/n8n/workspace',
 			method: 'GET',

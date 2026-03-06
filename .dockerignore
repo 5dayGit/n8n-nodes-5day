@@ -1,0 +1,36 @@
+# Source control
+.git
+.gitignore
+.github
+
+# Development artifacts
+node_modules
+dist
+
+# Editor / IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Test / CI artifacts
+coverage
+*.log
+
+# Local env files – never bake secrets into the image
+.env
+.env.*
+
+# Claude / AI tooling
+.claude
+
+# Documentation not needed in the image
+*.md
+LICENSE*
+CHANGELOG*
+CODE_OF_CONDUCT*
+README*
