@@ -79,7 +79,7 @@ USER node
 WORKDIR /home/node
 
 # n8n web / webhook port
-EXPOSE 5678
+EXPOSE 43040
 
 # ── Health check ───────────────────────────────────────────────
 # Used by Kubernetes liveness and readiness probes.
