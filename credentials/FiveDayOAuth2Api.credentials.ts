@@ -26,18 +26,14 @@ export class FiveDayOAuth2Api implements ICredentialType {
 			displayName: 'Authorization URL',
 			name: 'authUrl',
 			type: 'hidden',
-			default: 'https://login.5day.dev.5daylabs.com/api/login',
-			// default: 'https://login.5day.qa.5daylabs.com/api/login',
-			// default: 'http://login.localhost:4200/auth/login',
+			default: 'https://login.5day.io/auth/login',
 			required: true,
 		},
 		{
 			displayName: 'Access Token URL',
 			name: 'accessTokenUrl',
 			type: 'hidden',
-			default: 'https://gateway.dev.5daylabs.com/api/integration/auth/external/n8n/authorize',
-			// default: 'https://gateway.qa.5daylabs.com/api/integration/auth/external/n8n/authorize',
-			// default: 'http://localhost:41060/api/security/integration/auth/external/n8n/authorize',
+			default: 'https://gateway.5day.io/api/integration/auth/external/n8n/authorize',
 			required: true,
 		},
 		{
@@ -81,9 +77,7 @@ export class FiveDayOAuth2Api implements ICredentialType {
 	
 	test: ICredentialTestRequest = {
 		request: {
-			baseURL: 'https://gateway.dev.5daylabs.com',
-			// baseURL: 'https://gateway.qa.5daylabs.com',
-			// baseURL: 'http://localhost:41060',
+			baseURL: 'https://gateway.5day.io',
 			url: '/api/integration-service/v1/data/n8n/workspace',
 			method: 'GET',
 		},
