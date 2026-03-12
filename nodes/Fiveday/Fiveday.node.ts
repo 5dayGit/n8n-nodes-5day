@@ -344,7 +344,7 @@ async function executeProjectGetAll(this: IExecuteFunctions, i: number): Promise
 		if (spaceId) headers['space-id'] = spaceId;
 	}
 
-	const results = await fiveDayApiRequestAllItems.call(this, 'project', headers, returnAll, limit);
+	const results = await fiveDayApiRequestAllItems.call(this, 'projectdetail', headers, returnAll, limit);
 	return results.map((item) => ({ json: item }));
 }
 
