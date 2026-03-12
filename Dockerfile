@@ -90,7 +90,7 @@ HEALTHCHECK --interval=30s \
             --start-period=60s \
             --retries=3 \
             CMD wget --no-verbose --tries=1 --spider \
-                http://localhost:5678/healthz || exit 1
+                http://localhost:43040/healthz || exit 1
 
 # ── Entrypoint / Command ────────────────────────────────────────
 # Keep the parent image's ENTRYPOINT (tini → /docker-entrypoint.sh)
@@ -99,4 +99,4 @@ HEALTHCHECK --interval=30s \
 #
 # Override only CMD so that extra flags can still be injected via
 # the Kubernetes pod spec `args:` field without touching ENTRYPOINT.
-CMD ["n8n", "start"]
+#CMD ["n8n", "start"]
