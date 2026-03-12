@@ -61,7 +61,7 @@ USER root
 # Bring the packed artefact from the builder stage
 COPY --from=builder /build/n8n-nodes-5day-*.tgz /tmp/n8n-nodes-5day.tgz
 
-USER node
+USER root
 #WORKDIR /home/node/.n8n/nodes
 
 # Install the tarball; npm creates node_modules/n8n-nodes-5day/ here,
@@ -72,7 +72,7 @@ RUN npm install -g /tmp/n8n-nodes-5day.tgz \
     && rm -f /tmp/n8n-nodes-5day.tgz \
     && npm cache clean --force
 #RUN rm -f /tmp/n8n-nodes-5day.tgz
-#USER node
+USER node
 
 # ── Runtime ────────────────────────────────────────────────────
 WORKDIR /home/node
