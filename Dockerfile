@@ -56,8 +56,7 @@ LABEL org.opencontainers.image.base.name="docker.io/n8nio/n8n:1.122.1"
 # to the unprivileged `node` user (uid 1000) that n8n runs as.
 USER root
 
-#RUN mkdir -p /home/node/.n8n/nodes \
- && chown -R node:node /home/node/.n8n
+#RUN mkdir -p /home/node/.n8n/nodes \  && chown -R node:node /home/node/.n8n
 
 # Bring the packed artefact from the builder stage
 COPY --from=builder /build/n8n-nodes-5day-*.tgz /tmp/n8n-nodes-5day.tgz
@@ -67,11 +66,9 @@ USER node
 
 # Install the tarball; npm creates node_modules/n8n-nodes-5day/ here,
 # which is exactly the path n8n scans for community-node packages.
-#RUN npm install /tmp/n8n-nodes-5day.tgz \
- && npm cache clean --force
+#RUN npm install /tmp/n8n-nodes-5day.tgz \  && npm cache clean --force
 
-RUN npm install -g /tmp/n8n-nodes-5day.tgz \
- && npm cache clean --force
+RUN npm install -g /tmp/n8n-nodes-5day.tgz \  && npm cache clean --force
 
 # ── Cleanup ────────────────────────────────────────────────────
 USER node
