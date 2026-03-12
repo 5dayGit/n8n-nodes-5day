@@ -67,13 +67,12 @@ USER node
 # Install the tarball; npm creates node_modules/n8n-nodes-5day/ here,
 # which is exactly the path n8n scans for community-node packages.
 #RUN npm install /tmp/n8n-nodes-5day.tgz \  && npm cache clean --force
-
-RUN npm install -g /tmp/n8n-nodes-5day.tgz \  && npm cache clean --force
-
-# ── Cleanup ────────────────────────────────────────────────────
-USER node
-RUN rm -f /tmp/n8n-nodes-5day.tgz
-USER node
+#USER node
+RUN npm install -g /tmp/n8n-nodes-5day.tgz \
+    && rm -f /tmp/n8n-nodes-5day.tgz \
+    && npm cache clean --force
+#RUN rm -f /tmp/n8n-nodes-5day.tgz
+#USER node
 
 # ── Runtime ────────────────────────────────────────────────────
 WORKDIR /home/node
