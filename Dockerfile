@@ -16,16 +16,18 @@
 ##################################################################
 FROM node:20-alpine AS builder
 
+# Build tools required by native modules pulled in via n8n-workflow (isolated-vm)
+# and by @n8n/node-cli's native resolver (@unrs/resolver).
+RUN apk add --no-cache python3 make g++
+
 WORKDIR /build
 
 # Copy dependency manifests first – maximises Docker layer cache reuse.
 COPY package.json ./
 
-# Install ALL dependencies (devDeps needed for the build toolchain).
 # Use `npm install` (not `npm ci`) so npm resolves the correct platform-specific
-# native binaries for Alpine/Linux instead of using a Windows-generated lock file.
-# Do NOT use --ignore-scripts: napi-postinstall must run to select the right binary
-# for the @unrs/resolver native module used by @n8n/node-cli.
+# native binaries for Linux/Alpine instead of the Windows-generated lock file.
+# Build tools installed above allow isolated-vm and other native modules to compile.
 RUN npm install
 
 # Copy remaining source files
