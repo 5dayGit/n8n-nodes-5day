@@ -99,4 +99,4 @@ HEALTHCHECK --interval=30s \
 #
 # Override only CMD so that extra flags can still be injected via
 # the Kubernetes pod spec `args:` field without touching ENTRYPOINT.
-CMD ["n8n", "start"]
+# CMD ["n8n", "start"]
