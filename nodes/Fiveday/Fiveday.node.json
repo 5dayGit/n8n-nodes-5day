@@ -6,12 +6,12 @@
 	"resources": {
 		"credentialDocumentation": [
 			{
-				"url": "https://docs.5day.io/integrations/n8n"
+				"url": "https://github.com/5dayGit/n8n-nodes-5day/blob/main/README.md"
 			}
 		],
 		"primaryDocumentation": [
 			{
-				"url": "https://docs.5day.io/integrations/n8n"
+				"url": "https://github.com/5dayGit/n8n-nodes-5day/blob/main/README.md"
 			}
 		]
 	}
