@@ -1,9 +1,9 @@
-node_modules
-.DS_Store
-.tmp
-tmp
-dist
+# .DS_Store
+# .tmp
+# tmp
 npm-debug.log*
 yarn.lock
-.vscode/launch.json
+# .vscode/launch.json
 .claude
+dist
+node_modules
