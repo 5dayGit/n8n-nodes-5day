@@ -65,9 +65,11 @@ COPY --from=builder /build/n8n-nodes-5day-*.tgz /tmp/n8n-nodes-5day.tgz
 USER node
 WORKDIR /home/node/.n8n/nodes
 
-# Install the tarball; npm creates node_modules/n8n-nodes-5day/ here,
-# which is exactly the path n8n scans for community-node packages.
-RUN npm install /tmp/n8n-nodes-5day.tgz \
+# n8n scans ~/.n8n/nodes/node_modules/ for community packages.
+# A package.json must exist in this directory before npm install,
+# otherwise npm has no project context and the node won't be registered.
+RUN npm init -y \
+ && npm install /tmp/n8n-nodes-5day.tgz \
  && npm cache clean --force
 
 # ── Cleanup ────────────────────────────────────────────────────
@@ -99,4 +101,4 @@ HEALTHCHECK --interval=30s \
 #
 # Override only CMD so that extra flags can still be injected via
 # the Kubernetes pod spec `args:` field without touching ENTRYPOINT.
-# CMD ["n8n", "start"]
+CMD ["start"]
