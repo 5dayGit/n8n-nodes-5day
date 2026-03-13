@@ -19,12 +19,14 @@ FROM node:20-alpine AS builder
 WORKDIR /build
 
 # Copy dependency manifests first – maximises Docker layer cache reuse.
-# The heavy npm ci layer is only invalidated when package(-lock).json changes.
-COPY package.json package-lock.json ./
+COPY package.json ./
 
 # Install ALL dependencies (devDeps needed for the build toolchain).
-# --ignore-scripts prevents postinstall scripts from running in CI.
-RUN npm ci --ignore-scripts
+# Use `npm install` (not `npm ci`) so npm resolves the correct platform-specific
+# native binaries for Alpine/Linux instead of using a Windows-generated lock file.
+# Do NOT use --ignore-scripts: napi-postinstall must run to select the right binary
+# for the @unrs/resolver native module used by @n8n/node-cli.
+RUN npm install
 
 # Copy remaining source files
 COPY tsconfig.json       ./
@@ -51,27 +53,27 @@ LABEL org.opencontainers.image.vendor="5day.io"
 LABEL org.opencontainers.image.base.name="docker.io/n8nio/n8n:1.122.1"
 
 # ── Enable community/custom nodes ──────────────────────────────
-# n8n 1.x disables community packages by default; this must be
-# set to true so n8n scans ~/.n8n/nodes/node_modules/ on startup.
-ENV N8N_COMMUNITY_PACKAGES_ENABLED=true
+# N8N_CUSTOM_EXTENSIONS: n8n always scans this directory on startup and
+# loads any packages found there, regardless of the internal packages database.
+# This is the reliable approach for nodes pre-baked into a Docker image.
+# N8N_COMMUNITY_PACKAGES_ENABLED also set so the UI feature works too.
+ENV N8N_CUSTOM_EXTENSIONS=/home/node/.n8n/custom \
+    N8N_COMMUNITY_PACKAGES_ENABLED=true
 
 # ── Install the custom package ─────────────────────────────────
-# The n8n runtime expects community nodes in ~/.n8n/nodes/node_modules/.
-# We temporarily become root to create the directory, then drop back
-# to the unprivileged `node` user (uid 1000) that n8n runs as.
 USER root
 
-RUN mkdir -p /home/node/.n8n/nodes \
+RUN mkdir -p /home/node/.n8n/custom \
  && chown -R node:node /home/node/.n8n
 
 # Bring the packed artefact from the builder stage
 COPY --from=builder /build/n8n-nodes-5day-*.tgz /tmp/n8n-nodes-5day.tgz
 
 USER node
-WORKDIR /home/node/.n8n/nodes
+WORKDIR /home/node/.n8n/custom
 
-# Install the tarball; npm creates node_modules/n8n-nodes-5day/ here,
-# which is exactly the path n8n scans for community-node packages.
+# Install into the custom extensions directory.
+# n8n scans N8N_CUSTOM_EXTENSIONS/node_modules/ unconditionally on every start.
 RUN npm install /tmp/n8n-nodes-5day.tgz \
  && npm cache clean --force
 
