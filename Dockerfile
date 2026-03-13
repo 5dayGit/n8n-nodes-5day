@@ -53,27 +53,27 @@ LABEL org.opencontainers.image.vendor="5day.io"
 LABEL org.opencontainers.image.base.name="docker.io/n8nio/n8n:1.122.1"
 
 # ── Enable community/custom nodes ──────────────────────────────
-# N8N_CUSTOM_EXTENSIONS: n8n always scans this directory on startup and
-# loads any packages found there, regardless of the internal packages database.
-# This is the reliable approach for nodes pre-baked into a Docker image.
-# N8N_COMMUNITY_PACKAGES_ENABLED also set so the UI feature works too.
-ENV N8N_CUSTOM_EXTENSIONS=/home/node/.n8n/custom \
-    N8N_COMMUNITY_PACKAGES_ENABLED=true
+# n8n 1.x disables community packages by default; this must be
+# set to true so n8n scans ~/.n8n/nodes/node_modules/ on startup.
+ENV N8N_COMMUNITY_PACKAGES_ENABLED=true
 
 # ── Install the custom package ─────────────────────────────────
+# The n8n runtime expects community nodes in ~/.n8n/nodes/node_modules/.
+# We temporarily become root to create the directory, then drop back
+# to the unprivileged `node` user (uid 1000) that n8n runs as.
 USER root
 
-RUN mkdir -p /home/node/.n8n/custom \
+RUN mkdir -p /home/node/.n8n/nodes \
  && chown -R node:node /home/node/.n8n
 
 # Bring the packed artefact from the builder stage
 COPY --from=builder /build/n8n-nodes-5day-*.tgz /tmp/n8n-nodes-5day.tgz
 
 USER node
-WORKDIR /home/node/.n8n/custom
+WORKDIR /home/node/.n8n/nodes
 
-# Install into the custom extensions directory.
-# n8n scans N8N_CUSTOM_EXTENSIONS/node_modules/ unconditionally on every start.
+# Install the tarball; npm creates node_modules/n8n-nodes-5day/ here,
+# which is exactly the path n8n scans for community-node packages.
 RUN npm install /tmp/n8n-nodes-5day.tgz \
  && npm cache clean --force
 
@@ -106,4 +106,4 @@ HEALTHCHECK --interval=30s \
 #
 # Override only CMD so that extra flags can still be injected via
 # the Kubernetes pod spec `args:` field without touching ENTRYPOINT.
-CMD ["start"]
+# CMD ["start"]
