@@ -13,7 +13,7 @@ export class FiveDayOAuth2Api implements ICredentialType {
 
 	displayName = '5day OAuth2 API';
 
-	documentationUrl = 'https://docs.5day.io/integrations/n8n';
+	documentationUrl = 'https://github.com/5dayGit/n8n-nodes-5day/blob/main/README.md';
 
 	properties: INodeProperties[] = [
 		{
