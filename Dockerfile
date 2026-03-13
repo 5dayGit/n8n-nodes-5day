@@ -50,6 +50,11 @@ LABEL org.opencontainers.image.version="1.122.1-5day-0.1.0"
 LABEL org.opencontainers.image.vendor="5day.io"
 LABEL org.opencontainers.image.base.name="docker.io/n8nio/n8n:1.122.1"
 
+# ── Enable community/custom nodes ──────────────────────────────
+# n8n 1.x disables community packages by default; this must be
+# set to true so n8n scans ~/.n8n/nodes/node_modules/ on startup.
+ENV N8N_COMMUNITY_PACKAGES_ENABLED=true
+
 # ── Install the custom package ─────────────────────────────────
 # The n8n runtime expects community nodes in ~/.n8n/nodes/node_modules/.
 # We temporarily become root to create the directory, then drop back
