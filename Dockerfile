@@ -16,19 +16,15 @@
 ##################################################################
 FROM node:20-alpine AS builder
 
-# Build tools required by native modules pulled in via n8n-workflow (isolated-vm)
-# and by @n8n/node-cli's native resolver (@unrs/resolver).
-RUN apk add --no-cache python3 make g++
-
 WORKDIR /build
 
 # Copy dependency manifests first – maximises Docker layer cache reuse.
-COPY package.json ./
+# The heavy npm ci layer is only invalidated when package(-lock).json changes.
+COPY package.json package-lock.json ./
 
-# Use `npm install` (not `npm ci`) so npm resolves the correct platform-specific
-# native binaries for Linux/Alpine instead of the Windows-generated lock file.
-# Build tools installed above allow isolated-vm and other native modules to compile.
-RUN npm install
+# Install ALL dependencies (devDeps needed for the build toolchain).
+# --ignore-scripts prevents postinstall scripts from running in CI.
+RUN npm ci --ignore-scripts
 
 # Copy remaining source files
 COPY tsconfig.json       ./
@@ -53,11 +49,6 @@ LABEL org.opencontainers.image.description="n8n workflow automation extended wit
 LABEL org.opencontainers.image.version="1.122.1-5day-0.1.0"
 LABEL org.opencontainers.image.vendor="5day.io"
 LABEL org.opencontainers.image.base.name="docker.io/n8nio/n8n:1.122.1"
-
-# ── Enable community/custom nodes ──────────────────────────────
-# n8n 1.x disables community packages by default; this must be
-# set to true so n8n scans ~/.n8n/nodes/node_modules/ on startup.
-ENV N8N_COMMUNITY_PACKAGES_ENABLED=true
 
 # ── Install the custom package ─────────────────────────────────
 # The n8n runtime expects community nodes in ~/.n8n/nodes/node_modules/.
@@ -108,4 +99,4 @@ HEALTHCHECK --interval=30s \
 #
 # Override only CMD so that extra flags can still be injected via
 # the Kubernetes pod spec `args:` field without touching ENTRYPOINT.
-# CMD ["start"]
+CMD ["n8n", "start"]
