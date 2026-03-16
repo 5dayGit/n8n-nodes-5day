@@ -51,22 +51,21 @@ LABEL org.opencontainers.image.vendor="5day.io"
 LABEL org.opencontainers.image.base.name="docker.io/n8nio/n8n:1.122.1"
 
 # ── Install the custom package ─────────────────────────────────
-# The n8n runtime expects community nodes in ~/.n8n/nodes/node_modules/.
-# We temporarily become root to create the directory, then drop back
-# to the unprivileged `node` user (uid 1000) that n8n runs as.
+# IMPORTANT: We install to /n8n-custom-nodes (NOT /home/node/.n8n)
+# because /home/node/.n8n is overwritten by the Kubernetes PVC volume.
+# N8N_CUSTOM_EXTENSIONS must be set to /n8n-custom-nodes at runtime.
 USER root
 
-RUN mkdir -p /home/node/.n8n/nodes \
- && chown -R node:node /home/node/.n8n
+RUN mkdir -p /n8n-custom-nodes \
+ && chown -R node:node /n8n-custom-nodes
 
 # Bring the packed artefact from the builder stage
 COPY --from=builder /build/n8n-nodes-5day-*.tgz /tmp/n8n-nodes-5day.tgz
 
 USER node
-WORKDIR /home/node/.n8n/nodes
+WORKDIR /n8n-custom-nodes
 
-# Install the tarball; npm creates node_modules/n8n-nodes-5day/ here,
-# which is exactly the path n8n scans for community-node packages.
+# Install the tarball outside the volume-mounted path so it is never shadowed.
 RUN npm install /tmp/n8n-nodes-5day.tgz \
  && npm cache clean --force
 
