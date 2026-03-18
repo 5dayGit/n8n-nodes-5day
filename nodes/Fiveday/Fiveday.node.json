@@ -1,8 +1,9 @@
 {
-	"node": "n8n-nodes-base.5day",
+	"node": "n8n-nodes-5day.fiveday",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
 	"categories": ["Productivity"],
+	"alias": ["5day", "5day.io", "project management", "task management"],
 	"resources": {
 		"credentialDocumentation": [
 			{

@@ -33,7 +33,7 @@ export class FiveDayOAuth2Api implements ICredentialType {
 			displayName: 'Access Token URL',
 			name: 'accessTokenUrl',
 			type: 'hidden',
-			default: 'https://gateway.5day.io/api/integration/auth/external/n8n/authorize',
+			default: 'https://gateway.5day.io/api/security/integration/auth/external/n8n/authorize',
 			required: true,
 		},
 		{

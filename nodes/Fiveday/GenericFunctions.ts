@@ -11,16 +11,30 @@ import { NodeApiError } from 'n8n-workflow';
 const BASE_URL = 'https://gateway.5day.io';
 const PLATFORM = 'n8n';
 
-function getAccessToken(oauthTokenData: IDataObject): string {
-	return oauthTokenData.access_token as string;
-}
+async function getAccessToken(
+	context: IExecuteFunctions | ILoadOptionsFunctions,
+): Promise<string> {
+	const credentials = await context.getCredentials('fiveDayOAuth2Api');
+	const oauthTokenData = credentials.oauthTokenData as IDataObject | undefined;
+	const accessToken = oauthTokenData?.access_token as string | undefined;
 
-function buildHeaders(accessToken: string, extra: IDataObject = {}): IDataObject {
-	return {
-		'Content-Type': 'application/json',
-		'r-day5n8n-api-key': accessToken,
-		...extra,
-	};
+	if (!accessToken) {
+		throw new NodeApiError((context as IExecuteFunctions).getNode(), {}, {
+			message: 'Authentication token missing',
+			description: 'No access token found. Please reconnect your 5day.io credential.',
+		});
+	}
+
+	// Warn if token is expired so the error is clear
+	const expiresAt = oauthTokenData?.expires_at as number | undefined;
+	if (expiresAt && Date.now() >= expiresAt) {
+		throw new NodeApiError((context as IExecuteFunctions).getNode(), {}, {
+			message: 'Access token expired',
+			description: 'Your 5day.io OAuth2 token has expired. Please reconnect the credential to generate a new token.',
+		});
+	}
+
+	return accessToken;
 }
 
 export async function fiveDayApiRequest(
@@ -31,20 +45,20 @@ export async function fiveDayApiRequest(
 	headers: IDataObject = {},
 	isExecution = false,
 ): Promise<IDataObject> {
-	const credentials = await this.getCredentials('fiveDayOAuth2Api');
-	const oauthTokenData = credentials.oauthTokenData as IDataObject;
-	const accessToken = getAccessToken(oauthTokenData);
+	const accessToken = await getAccessToken(this);
 
 	const basePath = isExecution
 		? `/api/integration-service/v1/execution/${PLATFORM}/event/${entity}`
 		: `/api/integration-service/v1/data/${PLATFORM}/${entity}`;
 
-	const requestHeaders = buildHeaders(accessToken, headers);
-
 	const response = await this.helpers.httpRequest({
 		method,
 		url: `${BASE_URL}${basePath}`,
-		headers: requestHeaders,
+		headers: {
+			'Content-Type': 'application/json',
+			'r-day5n8n-api-key': accessToken,
+			...headers,
+		},
 		body: method !== 'GET' ? body : undefined,
 	});
 
@@ -58,11 +72,7 @@ export async function fiveDayApiRequestAllItems(
 	returnAll: boolean,
 	limit: number,
 ): Promise<IDataObject[]> {
-	const credentials = await this.getCredentials('fiveDayOAuth2Api');
-	const oauthTokenData = credentials.oauthTokenData as IDataObject;
-	const accessToken = getAccessToken(oauthTokenData);
-
-	const requestHeaders = buildHeaders(accessToken, headers);
+	const accessToken = await getAccessToken(this);
 
 	let pageNumber = 0;
 	const pageSize = returnAll ? 100 : limit;
@@ -74,7 +84,9 @@ export async function fiveDayApiRequestAllItems(
 			method: 'GET',
 			url: `${BASE_URL}/api/integration-service/v1/data/${PLATFORM}/${entity}`,
 			headers: {
-				...requestHeaders,
+				'Content-Type': 'application/json',
+				'r-day5n8n-api-key': accessToken,
+				...headers,
 				pagesize: pageSize.toString(),
 				pagenum: pageNumber.toString(),
 			},
@@ -105,26 +117,26 @@ export async function fiveDayLoadOptions(
 	valueField = 'id',
 	valueTransform?: (item: IDataObject) => string,
 ): Promise<INodePropertyOptions[]> {
+	// Guard: return empty list if credentials are not yet fully configured
 	const credentials = await this.getCredentials('fiveDayOAuth2Api').catch(() => null);
-
 	if (!credentials?.oauthTokenData || Object.keys(credentials.oauthTokenData as IDataObject).length === 0) {
 		return [];
 	}
 
-	const oauthTokenData = credentials.oauthTokenData as IDataObject;
-	const accessToken = getAccessToken(oauthTokenData);
-
+	const accessToken = (credentials.oauthTokenData as IDataObject).access_token as string | undefined;
 	if (!accessToken) {
 		return [];
 	}
-
-	const requestHeaders = buildHeaders(accessToken, extraHeaders);
 
 	try {
 		const response = await this.helpers.httpRequest({
 			method: 'GET',
 			url: `${BASE_URL}/api/integration-service/v1/data/${PLATFORM}/${entity}`,
-			headers: requestHeaders,
+			headers: {
+				'Content-Type': 'application/json',
+				'r-day5n8n-api-key': accessToken,
+				...extraHeaders,
+			},
 		});
 
 		const items = Array.isArray(response?.response?.data)
