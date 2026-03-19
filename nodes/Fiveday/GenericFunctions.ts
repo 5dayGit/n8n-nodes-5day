@@ -1,52 +1,34 @@
 import type {
-	IExecuteFunctions,
-	ILoadOptionsFunctions,
+	IAllExecuteFunctions,
 	IDataObject,
 	INodePropertyOptions,
 	IHttpRequestMethods,
-	JsonObject,
 } from 'n8n-workflow';
-import { NodeApiError } from 'n8n-workflow';
 
 const BASE_URL = 'https://gateway.dev.5daylabs.com';
 // const BASE_URL = 'https://gateway.qa.5daylabs.com';
 // const BASE_URL = 'http://localhost:41060';
 const PLATFORM = 'n8n';
 
-function getAccessToken(oauthTokenData: IDataObject): string {
-	return oauthTokenData.access_token as string;
-}
-
-function buildHeaders(accessToken: string, extra: IDataObject = {}): IDataObject {
-	return {
-		'Content-Type': 'application/json',
-		'r-day5n8n-api-key': accessToken,
-		...extra,
-	};
-}
-
 export async function fiveDayApiRequest(
-	this: IExecuteFunctions,
+	this: IAllExecuteFunctions,
 	method: IHttpRequestMethods,
 	entity: string,
 	body: IDataObject = {},
 	headers: IDataObject = {},
 	isExecution = false,
 ): Promise<IDataObject> {
-	const credentials = await this.getCredentials('fiveDayOAuth2Api');
-	const oauthTokenData = credentials.oauthTokenData as IDataObject;
-	const accessToken = getAccessToken(oauthTokenData);
-
 	const basePath = isExecution
 		? `/api/integration-service/v1/execution/${PLATFORM}/event/${entity}`
 		: `/api/integration-service/v1/data/${PLATFORM}/${entity}`;
 
-	const requestHeaders = buildHeaders(accessToken, headers);
-
-	const response = await this.helpers.httpRequest({
+	const response = await this.helpers.httpRequestWithAuthentication.call(this, 'fiveDayOAuth2Api', {
 		method,
 		url: `${BASE_URL}${basePath}`,
-		headers: requestHeaders,
+		headers: {
+			'Content-Type': 'application/json',
+			...headers,
+		},
 		body: method !== 'GET' ? body : undefined,
 	});
 
@@ -54,29 +36,24 @@ export async function fiveDayApiRequest(
 }
 
 export async function fiveDayApiRequestAllItems(
-	this: IExecuteFunctions,
+	this: IAllExecuteFunctions,
 	entity: string,
 	headers: IDataObject = {},
 	returnAll: boolean,
 	limit: number,
 ): Promise<IDataObject[]> {
-	const credentials = await this.getCredentials('fiveDayOAuth2Api');
-	const oauthTokenData = credentials.oauthTokenData as IDataObject;
-	const accessToken = getAccessToken(oauthTokenData);
-
-	const requestHeaders = buildHeaders(accessToken, headers);
-
 	let pageNumber = 0;
 	const pageSize = returnAll ? 100 : limit;
 	const allItems: IDataObject[] = [];
 	let hasMore = true;
 
 	while (hasMore) {
-		const response = await this.helpers.httpRequest({
+		const response = await this.helpers.httpRequestWithAuthentication.call(this, 'fiveDayOAuth2Api', {
 			method: 'GET',
 			url: `${BASE_URL}/api/integration-service/v1/data/${PLATFORM}/${entity}`,
 			headers: {
-				...requestHeaders,
+				'Content-Type': 'application/json',
+				...headers,
 				pagesize: pageSize.toString(),
 				pagenum: pageNumber.toString(),
 			},
@@ -100,33 +77,21 @@ export async function fiveDayApiRequestAllItems(
 }
 
 export async function fiveDayLoadOptions(
-	this: ILoadOptionsFunctions,
+	this: IAllExecuteFunctions,
 	entity: string,
 	extraHeaders: IDataObject = {},
 	nameField = 'name',
 	valueField = 'id',
 	valueTransform?: (item: IDataObject) => string,
 ): Promise<INodePropertyOptions[]> {
-	const credentials = await this.getCredentials('fiveDayOAuth2Api').catch(() => null);
-
-	if (!credentials?.oauthTokenData || Object.keys(credentials.oauthTokenData as IDataObject).length === 0) {
-		return [];
-	}
-
-	const oauthTokenData = credentials.oauthTokenData as IDataObject;
-	const accessToken = getAccessToken(oauthTokenData);
-
-	if (!accessToken) {
-		return [];
-	}
-
-	const requestHeaders = buildHeaders(accessToken, extraHeaders);
-
 	try {
-		const response = await this.helpers.httpRequest({
+		const response = await this.helpers.httpRequestWithAuthentication.call(this, 'fiveDayOAuth2Api', {
 			method: 'GET',
 			url: `${BASE_URL}/api/integration-service/v1/data/${PLATFORM}/${entity}`,
-			headers: requestHeaders,
+			headers: {
+				'Content-Type': 'application/json',
+				...extraHeaders,
+			},
 		});
 
 		const items = Array.isArray(response?.response?.data)
@@ -137,16 +102,8 @@ export async function fiveDayLoadOptions(
 			name: item[nameField] as string,
 			value: valueTransform ? valueTransform(item) : (item[valueField] as string),
 		}));
-	} catch (error) {
-		const errorObj = error as JsonObject;
-		const errorMessage = typeof errorObj.message === 'string'
-			? errorObj.message
-			: 'Unknown error occurred';
-
-		throw new NodeApiError(this.getNode(), errorObj, {
-			message: `Failed to load ${entity}`,
-			description: errorMessage,
-		});
+	} catch {
+		return [];
 	}
 }
 
