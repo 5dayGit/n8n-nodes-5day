@@ -150,7 +150,7 @@ export const projectFields: INodeProperties[] = [
 				name: 'progress',
 				type: 'number',
 				typeOptions: {
-					minValue: 1,
+					minValue: 0,
 					maxValue: 100,
 				},
 				default: 0,
