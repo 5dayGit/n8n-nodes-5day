@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-5day",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "n8n community node for 5day.io project management — manage projects, tasks, subtasks, comments, and users directly from your n8n workflows.",
   "license": "MIT",
   "homepage": "https://github.com/5dayGit/n8n-nodes-5day",
@@ -12,7 +12,7 @@
   ],
   "author": {
     "name": "Subscriptions",
-    "email": "subscription@5day.io"
+    "email": "subscriptions@5day.io"
   },
   "repository": {
     "type": "git",
