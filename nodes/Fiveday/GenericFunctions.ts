@@ -7,9 +7,9 @@ import type {
 } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 
-// const BASE_URL = 'https://gateway.dev.5daylabs.com';
+const BASE_URL = 'https://gateway.dev.5daylabs.com';
 // const BASE_URL = 'https://gateway.qa.5daylabs.com';
-const BASE_URL = 'http://localhost:42091';
+// const BASE_URL = 'http://localhost:42091';
 const PLATFORM = 'n8n';
 
 export async function fiveDayApiRequest(
