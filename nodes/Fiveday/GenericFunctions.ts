@@ -3,7 +3,9 @@ import type {
 	IDataObject,
 	INodePropertyOptions,
 	IHttpRequestMethods,
+	INode,
 } from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
 
 const BASE_URL = 'https://gateway.5day.io';
 const PLATFORM = 'n8n';
@@ -102,6 +104,13 @@ export async function fiveDayLoadOptions(
 		}));
 	} catch {
 		return [];
+	}
+}
+
+export function validateUUID(node: INode, value: string, fieldName: string): void {
+	const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+	if (!uuidRegex.test(value)) {
+		throw new NodeOperationError(node, `${fieldName} must be a valid ID (e.g. 123e4567-e89b-12d3-a456-426614174000), got: "${value}"`);
 	}
 }
 
