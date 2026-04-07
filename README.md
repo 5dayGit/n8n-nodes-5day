@@ -2,19 +2,20 @@
 
 An [n8n](https://n8n.io) community node that integrates [5day.io](https://5day.io) with n8n workflows.
 
-This node allows you to automate project management tasks such as creating projects, managing tasks and subtasks, posting comments, and retrieving users directly inside your n8n automations.
+This node allows you to automate project management tasks such as creating projects, managing tasks and subtasks, posting comments, managing tags, and retrieving users directly inside your n8n automations.
 
 5day.io is a minimalist project management tool that helps teams plan, track, and finish work without the noise.
 
 ## Supported Resources & Operations
 
-| Resource      | Operations                  |
-| ------------- | --------------------------- |
-| Project       | Create, Get Many            |
-| Task          | Create, Get Many, Search    |
-| Subtask       | Create, Get Many            |
-| Task Comment  | Create                      |
-| User          | Get Many                    |
+| Resource      | Operations                                          |
+| ------------- | --------------------------------------------------- |
+| Project       | Create, Delete, Get, Get Many, Update               |
+| Task          | Create, Delete, Get, Get Many, Move, Search, Update |
+| Subtask       | Create, Get Many                                    |
+| Task Comment  | Create, Delete                                      |
+| Task Tag      | Add Tag, Remove Tag                                 |
+| User          | Get, Get Many                                       |
 
 ## Authentication
 
@@ -71,13 +72,33 @@ Creates a new project in a workspace.
 
 **Optional fields:** Space, Description, Budget Type, Start Date, End Date, Priority, Status, Client, Progress, Prefix
 
+### Project — Delete
+
+Deletes an existing project.
+
+**Required fields:** Project
+
+### Project — Get
+
+Retrieves a single project by ID.
+
+**Required fields:** Project
+
 ### Project — Get Many
 
-Retrieves multiple projects within a workspace. 
+Retrieves multiple projects within a workspace.
 
 **Optional filters:** Space
 
 **Supports:** Return All (auto-pagination) or limit by count.
+
+### Project — Update
+
+Updates an existing project.
+
+**Required fields:** Workspace, Project
+
+**Optional fields:** Name, Description, Budget Type, Start Date, End Date, Priority, Status, Client, Progress, Prefix
 
 ### Task — Create
 
@@ -87,6 +108,18 @@ Creates a new task within a project.
 
 **Optional fields:** Section, Assignees, Description, Start Date, Due Date, Priority, Status, Tags, Story Point, Estimation, Linked Tasks, Custom Fields
 
+### Task — Delete
+
+Deletes an existing task.
+
+**Required fields:** Task ID
+
+### Task — Get
+
+Retrieves a single task by ID.
+
+**Required fields:** Task ID
+
 ### Task — Get Many
 
 Retrieves tasks from a project.
@@ -95,11 +128,25 @@ Retrieves tasks from a project.
 
 **Supports:** Return All or limit by count.
 
+### Task — Move
+
+Moves a task to a different project or section.
+
+**Required fields:** Task ID, Project, Section
+
 ### Task — Search
 
 Search for tasks using full-text search.
 
 **Supports:** Return All or limit by count.
+
+### Task — Update
+
+Updates an existing task.
+
+**Required fields:** Task ID, Project
+
+**Optional fields:** Name, Work Item Type, Section, Assignees, Description, Start Date, Due Date, Priority, Status, Tags, Story Point, Estimation, Linked Tasks, Custom Fields
 
 ### Subtask — Create
 
@@ -118,6 +165,30 @@ Retrieves all subtasks under a parent task.
 Adds a comment to a task.
 
 **Required fields:** Project, Task, Comment Message
+
+### Task Comment — Delete
+
+Removes a comment from a task.
+
+**Required fields:** Comment ID
+
+### Task Tag — Add Tag
+
+Adds one or more tags to a task.
+
+**Required fields:** Task ID, Project, Tags
+
+### Task Tag — Remove Tag
+
+Removes one or more tags from a task.
+
+**Required fields:** Task ID, Project, Tags
+
+### User — Get
+
+Retrieves a single user by ID.
+
+**Required fields:** User ID
 
 ### User — Get Many
 

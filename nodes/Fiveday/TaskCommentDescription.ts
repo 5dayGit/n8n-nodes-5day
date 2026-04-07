@@ -14,14 +14,37 @@ export const taskCommentOperations: INodeProperties = {
 		{
 			name: 'Create',
 			value: 'create',
-			description: 'Add a comment to a task',
-			action: 'Add a comment to a task',
+			description: 'Add a task comment',
+			action: 'Add a task comment',
+		},
+		{
+			name: 'Delete',
+			value: 'delete',
+			description: 'Remove a task comment',
+			action: 'Remove a task comment',
 		},
 	],
 	default: 'create',
 };
 
 export const taskCommentFields: INodeProperties[] = [
+	// ----------------------------------
+	//         Task Comment: Delete
+	// ----------------------------------
+	{
+		displayName: 'Comment ID',
+		name: 'commentId',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['taskComment'],
+				operation: ['delete'],
+			},
+		},
+		description: 'The ID of the comment to delete',
+	},
 	// ----------------------------------
 	//         Task Comment: Create
 	// ----------------------------------

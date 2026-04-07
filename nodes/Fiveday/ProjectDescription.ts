@@ -29,10 +29,28 @@ export const projectOperations: INodeProperties = {
 			action: 'Create a project',
 		},
 		{
+			name: 'Delete',
+			value: 'delete',
+			description: 'Delete a project',
+			action: 'Delete a project',
+		},
+		{
+			name: 'Get',
+			value: 'get',
+			description: 'Get a project',
+			action: 'Get a project',
+		},
+		{
 			name: 'Get Many',
 			value: 'getAll',
 			description: 'Get many projects',
 			action: 'Get many projects',
+		},
+		{
+			name: 'Update',
+			value: 'update',
+			description: 'Update a project',
+			action: 'Update a project',
 		},
 	],
 	default: 'create',
@@ -268,5 +286,183 @@ export const projectFields: INodeProperties[] = [
 			},
 		},
 		description: 'Max number of results to return',
+	},
+	// ----------------------------------
+	//         Project: Delete
+	// ----------------------------------
+	{
+		displayName: 'Project ID',
+		name: 'projectId',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['project'],
+				operation: ['delete'],
+			},
+		},
+		description: 'The ID of the project to delete',
+	},
+	// ----------------------------------
+	//         Project: Get
+	// ----------------------------------
+	{
+		displayName: 'Project ID',
+		name: 'projectId',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['project'],
+				operation: ['get'],
+			},
+		},
+		description: 'The ID of the project to retrieve',
+	},
+	// ----------------------------------
+	//         Project: Update
+	// ----------------------------------
+	{
+		displayName: 'Project ID',
+		name: 'projectId',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['project'],
+				operation: ['update'],
+			},
+		},
+		description: 'The ID of the project to update',
+	},
+	{
+		displayName: 'Workspace Name or ID',
+		name: 'workspaceId',
+		type: 'options',
+		typeOptions: {
+			loadOptionsMethod: 'getWorkspaces',
+			loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
+		},
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['project'],
+				operation: ['update'],
+			},
+		},
+		description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+	},
+	{
+		displayName: 'Additional Fields',
+		name: 'additionalFields',
+		type: 'collection',
+		placeholder: 'Add Field',
+		default: {},
+		displayOptions: {
+			show: {
+				resource: ['project'],
+				operation: ['update'],
+			},
+		},
+		options: [
+			{
+				displayName: 'Budget Type',
+				name: 'budgetType',
+				type: 'options',
+				options: budgetTypeOptions,
+				default: 'non-billable',
+				description: 'The budget type for the project',
+			},
+			{
+				displayName: 'Client Name or ID',
+				name: 'clientId',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getClients',
+					loadOptionsDependsOn: ['workspaceId'],
+				},
+				default: '',
+				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+			},
+			{
+				displayName: 'Description',
+				name: 'description',
+				type: 'string',
+				typeOptions: {
+					rows: 4,
+				},
+				default: '',
+				description: 'Description for the project',
+			},
+			{
+				displayName: 'End Date',
+				name: 'endDate',
+				type: 'dateTime',
+				default: '',
+				description: 'The end date of the project (must be after start date)',
+			},
+			{
+				displayName: 'Name',
+				name: 'name',
+				type: 'string',
+				default: '',
+				description: 'The new name of the project',
+			},
+			{
+				displayName: 'Prefix',
+				name: 'prefix',
+				type: 'string',
+				default: '',
+				typeOptions: {
+					minLength: 1,
+					maxLength: 6,
+				},
+				description: 'The prefix of project',
+			},
+			{
+				displayName: 'Priority Name or ID',
+				name: 'prioritiesId',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getTaskPriorities',
+					loadOptionsDependsOn: ['projectId'],
+				},
+				default: '',
+				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+			},
+			{
+				displayName: 'Progress',
+				name: 'progress',
+				type: 'number',
+				typeOptions: {
+					minValue: 0,
+					maxValue: 100,
+				},
+				default: 0,
+				description: 'The progress percentage of the project (1-100)',
+			},
+			{
+				displayName: 'Start Date',
+				name: 'startDate',
+				type: 'dateTime',
+				default: '',
+				description: 'The start date of the project',
+			},
+			{
+				displayName: 'Status Name or ID',
+				name: 'statusId',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getStatuses',
+					loadOptionsDependsOn: ['workspaceId'],
+				},
+				default: '',
+				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+			},
+		],
 	},
 ];

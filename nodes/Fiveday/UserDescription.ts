@@ -12,6 +12,12 @@ export const userOperations: INodeProperties = {
 	},
 	options: [
 		{
+			name: 'Get',
+			value: 'get',
+			description: 'Get a user',
+			action: 'Get a user',
+		},
+		{
 			name: 'Get Many',
 			value: 'getAll',
 			description: 'Get many users',
@@ -22,6 +28,23 @@ export const userOperations: INodeProperties = {
 };
 
 export const userFields: INodeProperties[] = [
+	// ----------------------------------
+	//         User: Get
+	// ----------------------------------
+	{
+		displayName: 'User ID',
+		name: 'userId',
+		type: 'string',
+		default: '',
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['user'],
+				operation: ['get'],
+			},
+		},
+		description: 'The ID of the user to retrieve',
+	},
 	// ----------------------------------
 	//         User: Get All
 	// ----------------------------------
