@@ -150,7 +150,7 @@ export const projectFields: INodeProperties[] = [
 					minLength: 1,
 					maxLength: 6,
 				},
-				description: 'The prefix of project',
+				description: 'The prefix of project (1-6 alphanumeric characters only). Cannot start with W, S, or G followed by numbers. Must be unique.',
 			},
 			{
 				displayName: 'Priority Name or ID',
@@ -170,9 +170,10 @@ export const projectFields: INodeProperties[] = [
 				typeOptions: {
 					minValue: 0,
 					maxValue: 100,
+					numberPrecision: 0,
 				},
 				default: 0,
-				description: 'The progress percentage of the project (1-100)',
+				description: 'The progress percentage of the project (0-100)',
 			},
 			{
 				displayName: 'Space Name or ID',
@@ -296,13 +297,14 @@ export const projectFields: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		required: true,
+		placeholder: 'e.g. P1',
 		displayOptions: {
 			show: {
 				resource: ['project'],
 				operation: ['delete'],
 			},
 		},
-		description: 'The ID of the project to delete',
+		description: 'The human-readable ID of the project as shown in the 5day application (e.g. P1)',
 	},
 	// ----------------------------------
 	//         Project: Get
@@ -313,13 +315,14 @@ export const projectFields: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		required: true,
+		placeholder: 'e.g. P1',
 		displayOptions: {
 			show: {
 				resource: ['project'],
 				operation: ['get'],
 			},
 		},
-		description: 'The ID of the project to retrieve',
+		description: 'The human-readable ID of the project as shown in the 5day application (e.g. P1)',
 	},
 	// ----------------------------------
 	//         Project: Update
@@ -330,13 +333,14 @@ export const projectFields: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		required: true,
+		placeholder: 'e.g. P1',
 		displayOptions: {
 			show: {
 				resource: ['project'],
 				operation: ['update'],
 			},
 		},
-		description: 'The ID of the project to update',
+		description: 'The human-readable ID of the project as shown in the 5day application (e.g. P1)',
 	},
 	{
 		displayName: 'Workspace Name or ID',
@@ -421,7 +425,7 @@ export const projectFields: INodeProperties[] = [
 					minLength: 1,
 					maxLength: 6,
 				},
-				description: 'The prefix of project',
+				description: 'The prefix of project (1-6 alphanumeric characters only). Cannot start with W, S, or G followed by numbers. Must be unique.',
 			},
 			{
 				displayName: 'Priority Name or ID',
@@ -441,9 +445,10 @@ export const projectFields: INodeProperties[] = [
 				typeOptions: {
 					minValue: 0,
 					maxValue: 100,
+					numberPrecision: 0,
 				},
 				default: 0,
-				description: 'The progress percentage of the project (1-100)',
+				description: 'The progress percentage of the project (0-100)',
 			},
 			{
 				displayName: 'Start Date',
@@ -457,8 +462,8 @@ export const projectFields: INodeProperties[] = [
 				name: 'statusId',
 				type: 'options',
 				typeOptions: {
-					loadOptionsMethod: 'getStatuses',
-					loadOptionsDependsOn: ['workspaceId'],
+					loadOptionsMethod: 'getProjectStatuses',
+					loadOptionsDependsOn: ['projectId'],
 				},
 				default: '',
 				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',

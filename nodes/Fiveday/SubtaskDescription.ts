@@ -61,7 +61,7 @@ export const subtaskFields: INodeProperties[] = [
 		description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 	},
 	{
-		displayName: 'Work Item Type Name or ID',
+		displayName: 'Task Type Name or ID',
 		name: 'workitemTypeId',
 		type: 'options',
 		typeOptions: {
@@ -84,13 +84,14 @@ export const subtaskFields: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		required: true,
+		placeholder: 'e.g. PRO-1',
 		displayOptions: {
 			show: {
 				resource: ['subtask'],
 				operation: ['create'],
 			},
 		},
-		description: 'The ID of the parent task under which the subtask will be created',
+		description: 'The human-readable ID of the parent task as shown in the 5day application (e.g. PRO-1)',
 	},
 	{
 		displayName: 'Subtask Name',
@@ -200,11 +201,12 @@ export const subtaskFields: INodeProperties[] = [
 				name: 'progress',
 				type: 'number',
 				typeOptions: {
-					minValue: 1,
+					minValue: 0,
 					maxValue: 100,
+					numberPrecision: 0,
 				},
 				default: 0,
-				description: 'The progress percentage of the subtask (1-100)',
+				description: 'The progress percentage of the subtask (0-100)',
 			},
 			{
 				displayName: 'Section Name or ID',
@@ -230,7 +232,7 @@ export const subtaskFields: INodeProperties[] = [
 				type: 'options',
 				typeOptions: {
 					loadOptionsMethod: 'getTaskStatuses',
-					loadOptionsDependsOn: ['projectId'],
+					loadOptionsDependsOn: ['projectId', 'workitemTypeId'],
 				},
 				default: '',
 				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
@@ -241,6 +243,7 @@ export const subtaskFields: INodeProperties[] = [
 				type: 'number',
 				typeOptions: {
 					minValue: 0,
+					maxValue: 99.99,
 					numberPrecision: 2,
 				},
 				default: 0,
@@ -286,13 +289,14 @@ export const subtaskFields: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		required: true,
+		placeholder: 'e.g. PRO-1',
 		displayOptions: {
 			show: {
 				resource: ['subtask'],
 				operation: ['getAll'],
 			},
 		},
-		description: 'The ID of the parent task whose subtasks to retrieve',
+		description: 'The human-readable ID of the parent task as shown in the 5day application (e.g. PRO-1)',
 	},
 	{
 		displayName: 'Filter by Section',

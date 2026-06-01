@@ -72,13 +72,14 @@ export const taskCommentFields: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		required: true,
+		placeholder: 'e.g. PRO-1',
 		displayOptions: {
 			show: {
 				resource: ['taskComment'],
 				operation: ['create'],
 			},
 		},
-		description: 'The ID of the task to add the comment to',
+		description: 'The human-readable ID of the task as shown in the 5day application (e.g. PRO-1)',
 	},
 	{
 		displayName: 'Comment',

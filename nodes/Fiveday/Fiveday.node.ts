@@ -15,6 +15,8 @@ import { taskOperations, taskFields } from './TaskDescription';
 import { subtaskOperations, subtaskFields } from './SubtaskDescription';
 import { taskCommentOperations, taskCommentFields } from './TaskCommentDescription';
 import { taskTagOperations, taskTagFields } from './TaskTagDescription';
+import { taskAssigneeOperations, taskAssigneeFields } from './TaskAssigneeDescription';
+import { taskLinkOperations, taskLinkFields } from './TaskLinkDescription';
 import { userOperations, userFields } from './UserDescription';
 import {
 	fiveDayApiRequest,
@@ -22,6 +24,8 @@ import {
 	fiveDayLoadOptions,
 	formatDate,
 	validateDateRange,
+	validatePrefix,
+	validateStoryPoint,
 	parseStatusField,
 	applyWorkItemFields,
 	validateUUID,
@@ -68,8 +72,16 @@ export class Fiveday implements INodeType {
 						value: 'task',
 					},
 					{
+						name: 'Task Assignee',
+						value: 'taskAssignee',
+					},
+					{
 						name: 'Task Comment',
 						value: 'taskComment',
+					},
+					{
+						name: 'Task Link',
+						value: 'taskLink',
 					},
 					{
 						name: 'Task Tag',
@@ -85,13 +97,17 @@ export class Fiveday implements INodeType {
 			projectOperations,
 			taskOperations,
 			subtaskOperations,
+			taskAssigneeOperations,
 			taskCommentOperations,
+			taskLinkOperations,
 			taskTagOperations,
 			userOperations,
 			...projectFields,
 			...taskFields,
 			...subtaskFields,
+			...taskAssigneeFields,
 			...taskCommentFields,
+			...taskLinkFields,
 			...taskTagFields,
 			...userFields,
 		],
@@ -110,7 +126,7 @@ export class Fiveday implements INodeType {
 			},
 
 			async getProjects(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-				return fiveDayLoadOptions.call(this, 'project');
+				return fiveDayLoadOptions.call(this, 'project', { 'exclude-done': 'true' });
 			},
 
 			async getWorkitemTypes(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
@@ -127,8 +143,29 @@ export class Fiveday implements INodeType {
 
 			async getTasks(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const projectId = this.getCurrentNodeParameter('projectId') as string;
+				const taskId = this.getCurrentNodeParameter('taskId') as string | undefined;
 				if (!projectId) return [];
-				return fiveDayLoadOptions.call(this, 'workitem', { 'project-id': projectId });
+
+				const headers: IDataObject = { 'project-id': projectId };
+
+				if(taskId) {
+					headers['workitem-id'] = taskId;
+				}
+
+				return fiveDayLoadOptions.call(this, 'workitem', headers);
+			},
+
+			async getTasksForLink(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const projectId = this.getCurrentNodeParameter('projectId') as string;
+				const taskId = this.getCurrentNodeParameter('taskId') as string;
+				const operation = this.getCurrentNodeParameter('operation') as string;
+				if (!projectId || !taskId) return [];
+
+				const headers: IDataObject = { 'project-id': projectId };
+				headers['workitem-id'] = taskId;
+				headers['subaction'] = operation === 'addLink' ? 'add' : 'remove';
+
+				return fiveDayLoadOptions.call(this, 'workitemlink', headers);
 			},
 
 			async getClients(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
@@ -161,16 +198,53 @@ export class Fiveday implements INodeType {
 				);
 			},
 
+			async getProjectStatuses(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const projectId = this.getCurrentNodeParameter('projectId') as string;
+				if (!projectId) return [];
+				return fiveDayLoadOptions.call(
+					this,
+					'projectworkitemstatus',
+					{ 'project-id': projectId },
+					'name',
+					'id',
+					(status: IDataObject) =>
+						JSON.stringify({
+							statusId: status.id,
+							stage: status.stage,
+							projectWorkflowId: status.workflowId,
+						}),
+				);
+			},
+
 			async getUsers(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const projectId = this.getCurrentNodeParameter('projectId') as string;
 				if (!projectId) return [];
 				return fiveDayLoadOptions.call(this, 'users', { 'project-id': projectId }, 'fullName');
 			},
 
+			async getAssignees(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const projectId = this.getCurrentNodeParameter('projectId') as string;
+				const taskId = this.getCurrentNodeParameter('taskId') as string;
+				const operation = this.getCurrentNodeParameter('operation') as string;
+				if (!projectId || !taskId) return [];
+
+				const headers: IDataObject = { 'project-id': projectId };
+				headers['workitem-id'] = taskId;
+				headers['subaction'] = operation === 'addAssignee' ? 'add' : 'remove';
+
+				return fiveDayLoadOptions.call(this, 'workitemassignee', headers, 'fullName');
+			},
+
 			async getTags(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const projectId = this.getCurrentNodeParameter('projectId') as string;
 				if (!projectId) return [];
 				return fiveDayLoadOptions.call(this, 'tags', { 'project-id': projectId });
+			},
+
+			async getTaskTags(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const taskId = this.getCurrentNodeParameter('taskId') as string;
+				if (!taskId) return [];
+				return fiveDayLoadOptions.call(this, 'tags', { 'workitem-id': taskId });
 			},
 
 			async getTaskPriorities(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
@@ -182,10 +256,25 @@ export class Fiveday implements INodeType {
 			async getTaskStatuses(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const projectId = this.getCurrentNodeParameter('projectId') as string;
 				if (!projectId) return [];
+
+				const headers: IDataObject = { 'project-id': projectId };
+
+				const taskId = this.getCurrentNodeParameter('taskId') as string | undefined;
+				const parentTaskId = this.getCurrentNodeParameter('parentTaskId') as string | undefined;
+				const workitemTypeId = this.getCurrentNodeParameter('workitemTypeId') as string | undefined;
+
+				const workitemId = taskId || parentTaskId;
+
+				if (workitemId) {
+					headers['workitem-id'] = workitemId;
+				} else if (workitemTypeId) {
+					headers['workitemtype-id'] = workitemTypeId;
+				}
+
 				return fiveDayLoadOptions.call(
 					this,
 					'workitemstatus',
-					{ 'project-id': projectId },
+					headers,
 					'name',
 					'id',
 					(status: IDataObject) =>
@@ -256,12 +345,28 @@ export class Fiveday implements INodeType {
 						const results = await executeSubtaskGetAll.call(this, i);
 						returnData.push(...results.map((r) => ({ json: r.json as IDataObject, pairedItem: { item: i } })));
 					}
+				} else if (resource === 'taskAssignee') {
+					if (operation === 'addAssignee') {
+						const result = await executeTaskAssigneeAdd.call(this, i);
+						returnData.push({ json: result.json as IDataObject, pairedItem: { item: i } });
+					} else if (operation === 'removeAssignee') {
+						const result = await executeTaskAssigneeRemove.call(this, i);
+						returnData.push({ json: result.json as IDataObject, pairedItem: { item: i } });
+					}
 				} else if (resource === 'taskComment') {
 					if (operation === 'create') {
 						const result = await executeTaskCommentCreate.call(this, i);
 						returnData.push({ json: result.json as IDataObject, pairedItem: { item: i } });
 					} else if (operation === 'delete') {
 						const result = await executeTaskCommentDelete.call(this, i);
+						returnData.push({ json: result.json as IDataObject, pairedItem: { item: i } });
+					}
+				} else if (resource === 'taskLink') {
+					if (operation === 'addLink') {
+						const result = await executeTaskLinkAdd.call(this, i);
+						returnData.push({ json: result.json as IDataObject, pairedItem: { item: i } });
+					} else if (operation === 'removeLink') {
+						const result = await executeTaskLinkRemove.call(this, i);
 						returnData.push({ json: result.json as IDataObject, pairedItem: { item: i } });
 					}
 				} else if (resource === 'taskTag') {
@@ -288,6 +393,9 @@ export class Fiveday implements INodeType {
 						pairedItem: { item: i },
 					});
 					continue;
+				}
+				if (error instanceof NodeApiError) {
+					throw error;
 				}
 				throw new NodeApiError(this.getNode(), error as JsonObject);
 			}
@@ -346,6 +454,7 @@ async function executeProjectCreate(this: IExecuteFunctions, i: number): Promise
 	}
 
 	if (additionalFields.prefix) {
+		validatePrefix(additionalFields.prefix as string);
 		body.prefix = additionalFields.prefix as string;
 	}
 
@@ -374,7 +483,6 @@ async function executeProjectCreate(this: IExecuteFunctions, i: number): Promise
 
 async function executeProjectDelete(this: IExecuteFunctions, i: number): Promise<IDataObject> {
 	const projectId = this.getNodeParameter('projectId', i) as string;
-	validateUUID(this.getNode(), projectId, 'Project ID');
 
 	const headers: IDataObject = {
 		action: 'delete',
@@ -394,7 +502,6 @@ async function executeProjectDelete(this: IExecuteFunctions, i: number): Promise
 
 async function executeProjectGet(this: IExecuteFunctions, i: number): Promise<IDataObject> {
 	const projectId = this.getNodeParameter('projectId', i) as string;
-	validateUUID(this.getNode(), projectId, 'Project ID');
 
 	const headers: IDataObject = {
 		'project-id': projectId,
@@ -407,7 +514,6 @@ async function executeProjectGet(this: IExecuteFunctions, i: number): Promise<ID
 
 async function executeProjectUpdate(this: IExecuteFunctions, i: number): Promise<IDataObject> {
 	const projectId = this.getNodeParameter('projectId', i) as string;
-	validateUUID(this.getNode(), projectId, 'Project ID');
 	const workspaceId = this.getNodeParameter('workspaceId', i) as string;
 	const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
 
@@ -450,6 +556,7 @@ async function executeProjectUpdate(this: IExecuteFunctions, i: number): Promise
 	}
 
 	if (additionalFields.prefix) {
+		validatePrefix(additionalFields.prefix as string);
 		body.prefix = additionalFields.prefix as string;
 	}
 
@@ -515,6 +622,10 @@ async function executeTaskCreate(this: IExecuteFunctions, i: number): Promise<ID
 		action: 'create',
 	};
 
+	if (additionalFields.storyPoint !== undefined) {
+		validateStoryPoint(additionalFields.storyPoint as number);
+	}
+
 	applyWorkItemFields(body, additionalFields);
 
 	if (additionalFields.assignee && Array.isArray(additionalFields.assignee) && (additionalFields.assignee as string[]).length > 0) {
@@ -527,7 +638,6 @@ async function executeTaskCreate(this: IExecuteFunctions, i: number): Promise<ID
 
 async function executeTaskDelete(this: IExecuteFunctions, i: number): Promise<IDataObject> {
 	const taskId = this.getNodeParameter('taskId', i) as string;
-	validateUUID(this.getNode(), taskId, 'Task ID');
 
 	const headers: IDataObject = {
 		action: 'delete',
@@ -547,7 +657,6 @@ async function executeTaskDelete(this: IExecuteFunctions, i: number): Promise<ID
 
 async function executeTaskGet(this: IExecuteFunctions, i: number): Promise<IDataObject> {
 	const taskId = this.getNodeParameter('taskId', i) as string;
-	validateUUID(this.getNode(), taskId, 'Task ID');
 
 	const headers: IDataObject = {
 		'workitem-id': taskId,
@@ -561,7 +670,6 @@ async function executeTaskGet(this: IExecuteFunctions, i: number): Promise<IData
 async function executeTaskUpdate(this: IExecuteFunctions, i: number): Promise<IDataObject> {
 	const projectId = this.getNodeParameter('projectId', i) as string;
 	const taskId = this.getNodeParameter('taskId', i) as string;
-	validateUUID(this.getNode(), taskId, 'Task ID');
 	const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
 
 	const body: IDataObject = {
@@ -581,6 +689,10 @@ async function executeTaskUpdate(this: IExecuteFunctions, i: number): Promise<ID
 
 	if (additionalFields.workitemTypeId) {
 		body.taskTypeId = additionalFields.workitemTypeId as string;
+	}
+
+	if (additionalFields.storyPoint !== undefined) {
+		validateStoryPoint(additionalFields.storyPoint as number);
 	}
 
 	applyWorkItemFields(body, additionalFields);
@@ -614,7 +726,6 @@ async function executeTaskGetAll(this: IExecuteFunctions, i: number): Promise<ID
 
 async function executeTaskMove(this: IExecuteFunctions, i: number): Promise<IDataObject> {
 	const taskId = this.getNodeParameter('taskId', i) as string;
-	validateUUID(this.getNode(), taskId, 'Task ID');
 	const projectId = this.getNodeParameter('projectId', i) as string;
 	const sectionId = this.getNodeParameter('sectionId', i) as string;
 
@@ -657,7 +768,6 @@ async function executeSubtaskCreate(this: IExecuteFunctions, i: number): Promise
 	const projectId = this.getNodeParameter('projectId', i) as string;
 	const taskTypeId = this.getNodeParameter('workitemTypeId', i) as string;
 	const parentTaskId = this.getNodeParameter('parentTaskId', i) as string;
-	validateUUID(this.getNode(), parentTaskId, 'Parent Task ID');
 	const taskName = this.getNodeParameter('taskName', i) as string;
 	const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
 
@@ -672,6 +782,10 @@ async function executeSubtaskCreate(this: IExecuteFunctions, i: number): Promise
 		action: 'create',
 	};
 
+	if (additionalFields.storyPoint !== undefined) {
+		validateStoryPoint(additionalFields.storyPoint as number);
+	}
+
 	applyWorkItemFields(body, additionalFields);
 
 	if (additionalFields.assignee) {
@@ -685,7 +799,6 @@ async function executeSubtaskCreate(this: IExecuteFunctions, i: number): Promise
 async function executeSubtaskGetAll(this: IExecuteFunctions, i: number): Promise<IDataObject[]> {
 	const projectId = this.getNodeParameter('projectId', i) as string;
 	const parentTaskId = this.getNodeParameter('parentTaskId', i) as string;
-	validateUUID(this.getNode(), parentTaskId, 'Parent Task ID');
 	const filterBySection = this.getNodeParameter('filterBySection', i) as boolean;
 	const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 	const limit = this.getNodeParameter('limit', i, 50) as number;
@@ -711,7 +824,6 @@ async function executeSubtaskGetAll(this: IExecuteFunctions, i: number): Promise
 async function executeTaskCommentCreate(this: IExecuteFunctions, i: number): Promise<IDataObject> {
 	const projectId = this.getNodeParameter('projectId', i) as string;
 	const workitemId = this.getNodeParameter('workitemId', i) as string;
-	validateUUID(this.getNode(), workitemId, 'Task ID');
 	const messageBody = this.getNodeParameter('messageBody', i) as string;
 
 	const body: IDataObject = {
@@ -754,7 +866,6 @@ async function executeTaskCommentDelete(this: IExecuteFunctions, i: number): Pro
 
 async function executeUserGet(this: IExecuteFunctions, i: number): Promise<IDataObject> {
 	const userId = this.getNodeParameter('userId', i) as string;
-	validateUUID(this.getNode(), userId, 'User ID');
 
 	const headers: IDataObject = {
 		'user-id': userId,
@@ -794,7 +905,6 @@ async function executeUserGetAll(this: IExecuteFunctions, i: number): Promise<ID
 
 async function executeTaskTagAdd(this: IExecuteFunctions, i: number): Promise<IDataObject> {
 	const taskId = this.getNodeParameter('taskId', i) as string;
-	validateUUID(this.getNode(), taskId, 'Task ID');
 	const projectId = this.getNodeParameter('projectId', i) as string;
 	const tags = this.getNodeParameter('tags', i) as string[];
 
@@ -815,7 +925,6 @@ async function executeTaskTagAdd(this: IExecuteFunctions, i: number): Promise<ID
 
 async function executeTaskTagRemove(this: IExecuteFunctions, i: number): Promise<IDataObject> {
 	const taskId = this.getNodeParameter('taskId', i) as string;
-	validateUUID(this.getNode(), taskId, 'Task ID');
 	const projectId = this.getNodeParameter('projectId', i) as string;
 	const tags = this.getNodeParameter('tags', i) as string[];
 
@@ -832,4 +941,100 @@ async function executeTaskTagRemove(this: IExecuteFunctions, i: number): Promise
 
 	const response = await fiveDayApiRequest.call(this, 'POST', 'workitem', body, headers, true);
 	return { json: response.data as IDataObject };
+}
+
+// ------------------------------------------------------------------
+//                 Task Assignee Operations
+// ------------------------------------------------------------------
+
+async function executeTaskAssigneeAdd(this: IExecuteFunctions, i: number): Promise<IDataObject> {
+	const taskId = this.getNodeParameter('taskId', i) as string;
+	const projectId = this.getNodeParameter('projectId', i) as string;
+	const assignee = this.getNodeParameter('assignee', i) as string[];
+
+	const body: IDataObject = {
+		id: taskId,
+		projectId,
+		assignee,
+	};
+
+	const headers: IDataObject = {
+		action: 'assignee',
+		subaction: "add",
+	};
+
+	const response = await fiveDayApiRequest.call(this, 'POST', 'workitem', body, headers, true);
+	return { json: response.data as IDataObject };
+}
+
+async function executeTaskAssigneeRemove(this: IExecuteFunctions, i: number): Promise<IDataObject> {
+	const taskId = this.getNodeParameter('taskId', i) as string;
+	const projectId = this.getNodeParameter('projectId', i) as string;
+	const assignee = this.getNodeParameter('assignee', i) as string[];
+
+	const body: IDataObject = {
+		id: taskId,
+		projectId,
+		assignee,
+	};
+
+	const headers: IDataObject = {
+		action: 'assignee',
+		subaction: "remove",
+	};
+
+	const response = await fiveDayApiRequest.call(this, 'POST', 'workitem', body, headers, true);
+	return { json: response.data as IDataObject };
+}
+
+// ------------------------------------------------------------------
+//                    Task Link Operations
+// ------------------------------------------------------------------
+
+async function executeTaskLinkAdd(this: IExecuteFunctions, i: number): Promise<IDataObject> {
+	const taskId = this.getNodeParameter('taskId', i) as string;
+	const projectId = this.getNodeParameter('projectId', i) as string;
+	const linkedTaskIds = this.getNodeParameter('linkedTaskIds', i) as string[];
+
+	const body: IDataObject = {
+		id: taskId,
+		projectId,
+		taskLinkItemId: linkedTaskIds,
+	};
+
+	const headers: IDataObject = {
+		action: 'link',
+		subaction: "add",
+	};
+
+	const response = await fiveDayApiRequest.call(this, 'POST', 'workitem', body, headers, true);
+	return {
+		json: {
+			success: response.statusCode === 200
+		},
+	};
+}
+
+async function executeTaskLinkRemove(this: IExecuteFunctions, i: number): Promise<IDataObject> {
+	const taskId = this.getNodeParameter('taskId', i) as string;
+	const projectId = this.getNodeParameter('projectId', i) as string;
+	const linkedTaskIds = this.getNodeParameter('linkedTaskIds', i) as string[];
+
+	const body: IDataObject = {
+		id: taskId,
+		projectId,
+		taskLinkItemId: linkedTaskIds,
+	};
+
+	const headers: IDataObject = {
+		action: 'link',
+		subaction: "remove",
+	};
+
+	const response = await fiveDayApiRequest.call(this, 'POST', 'workitem', body, headers, true);
+	return {
+		json: {
+			success: response.statusCode === 200
+		},
+	};
 }

@@ -37,13 +37,14 @@ export const userFields: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		required: true,
+		placeholder: 'e.g. U-1',
 		displayOptions: {
 			show: {
 				resource: ['user'],
 				operation: ['get'],
 			},
 		},
-		description: 'The ID of the user to retrieve',
+		description: 'The human-readable ID of the user as shown in the 5day application (e.g. U-1)',
 	},
 	// ----------------------------------
 	//         User: Get All

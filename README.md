@@ -8,14 +8,16 @@ This node allows you to automate project management tasks such as creating proje
 
 ## Supported Resources & Operations
 
-| Resource      | Operations                                          |
-| ------------- | --------------------------------------------------- |
-| Project       | Create, Delete, Get, Get Many, Update               |
-| Task          | Create, Delete, Get, Get Many, Move, Search, Update |
-| Subtask       | Create, Get Many                                    |
-| Task Comment  | Create, Delete                                      |
-| Task Tag      | Add Tag, Remove Tag                                 |
-| User          | Get, Get Many                                       |
+| Resource        | Operations                                          |
+| --------------- | --------------------------------------------------- |
+| Project         | Create, Delete, Get, Get Many, Update               |
+| Task            | Create, Delete, Get, Get Many, Move, Search, Update |
+| Subtask         | Create, Get Many                                    |
+| Task Assignee   | Add Assignee, Remove Assignee                       |
+| Task Comment    | Create, Delete                                      |
+| Task Link       | Add Link, Remove Link                               |
+| Task Tag        | Add Tag, Remove Tag                                 |
+| User            | Get, Get Many                                       |
 
 ## Authentication
 
@@ -106,7 +108,7 @@ Creates a new task within a project.
 
 **Required fields:** Project, Work Item Type, Task Name
 
-**Optional fields:** Section, Assignees, Description, Start Date, Due Date, Priority, Status, Tags, Story Point, Estimation, Linked Tasks, Custom Fields
+**Optional fields:** Section, Assignees, Description, Start Date, Due Date, Priority, Status, Tags, Story Point, Estimation, Linked Tasks, Progress, Budget Type, Custom Fields
 
 ### Task — Delete
 
@@ -146,7 +148,9 @@ Updates an existing task.
 
 **Required fields:** Task ID, Project
 
-**Optional fields:** Name, Work Item Type, Section, Assignees, Description, Start Date, Due Date, Priority, Status, Tags, Story Point, Estimation, Linked Tasks, Custom Fields
+**Optional fields:** Name, Work Item Type, Section, Description, Start Date, Due Date, Priority, Status, Story Point, Estimation, Progress, Budget Type, Custom Fields
+
+**Note:** To manage assignees and links, use the Task Assignee and Task Link resources respectively.
 
 ### Subtask — Create
 
@@ -154,7 +158,7 @@ Creates a subtask under an existing parent task.
 
 **Required fields:** Project, Work Item Type, Parent Task, Subtask Name
 
-**Optional fields:** Section, Assignees, Description, Start Date, Due Date, Priority, Status, Tags, Story Point, Estimation, Linked Tasks, Custom Fields
+**Optional fields:** Section, Assignee, Description, Start Date, Due Date, Priority, Status, Tags, Story Point, Estimation, Progress, Budget Type, Linked Tasks, Custom Fields
 
 ### Subtask — Get Many
 
@@ -164,7 +168,7 @@ Retrieves all subtasks under a parent task.
 
 Adds a comment to a task.
 
-**Required fields:** Project, Task, Comment Message
+**Required fields:** Project, Task ID, Comment
 
 ### Task Comment — Delete
 
@@ -184,6 +188,30 @@ Removes one or more tags from a task.
 
 **Required fields:** Task ID, Project, Tags
 
+### Task Assignee — Add Assignee
+
+Adds one or more assignees to a task.
+
+**Required fields:** Task ID, Project, Assignees
+
+### Task Assignee — Remove Assignee
+
+Removes one or more assignees from a task.
+
+**Required fields:** Task ID, Project, Assignees
+
+### Task Link — Add Link
+
+Links one or more tasks to the current task.
+
+**Required fields:** Task ID, Project, Linked Task IDs
+
+### Task Link — Remove Link
+
+Unlinks one or more tasks from the current task.
+
+**Required fields:** Task ID, Project, Linked Task IDs
+
 ### User — Get
 
 Retrieves a single user by ID.
@@ -195,6 +223,8 @@ Retrieves a single user by ID.
 Retrieves users.
 
 **Optional filters:** Workspace, Project
+
+**Supports:** Return All (auto-pagination) or limit by count.
 
 ## Compatibility
 

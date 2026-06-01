@@ -91,7 +91,7 @@ export const taskFields: INodeProperties[] = [
 		description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 	},
 	{
-		displayName: 'Work Item Type Name or ID',
+		displayName: 'Task Type Name or ID',
 		name: 'workitemTypeId',
 		type: 'options',
 		typeOptions: {
@@ -218,9 +218,10 @@ export const taskFields: INodeProperties[] = [
 				typeOptions: {
 					minValue: 0,
 					maxValue: 100,
+					numberPrecision: 0,
 				},
 				default: 0,
-				description: 'The progress percentage of the task (1-100)',
+				description: 'The progress percentage of the task (0-100)',
 			},
 			{
 				displayName: 'Section Name or ID',
@@ -246,7 +247,7 @@ export const taskFields: INodeProperties[] = [
 				type: 'options',
 				typeOptions: {
 					loadOptionsMethod: 'getTaskStatuses',
-					loadOptionsDependsOn: ['projectId'],
+					loadOptionsDependsOn: ['projectId', 'workitemTypeId'],
 				},
 				default: '',
 				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
@@ -257,6 +258,7 @@ export const taskFields: INodeProperties[] = [
 				type: 'number',
 				typeOptions: {
 					minValue: 0,
+					maxValue: 99.99,
 					numberPrecision: 2,
 				},
 				default: 0,
@@ -413,13 +415,14 @@ export const taskFields: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		required: true,
+		placeholder: 'e.g. PRO-1',
 		displayOptions: {
 			show: {
 				resource: ['task'],
 				operation: ['delete'],
 			},
 		},
-		description: 'The ID of the task to delete',
+		description: 'The human-readable ID of the task as shown in the 5day application (e.g. PRO-1)',
 	},
 	// ----------------------------------
 	//         Task: Get
@@ -430,13 +433,14 @@ export const taskFields: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		required: true,
+		placeholder: 'e.g. PRO-1',
 		displayOptions: {
 			show: {
 				resource: ['task'],
 				operation: ['get'],
 			},
 		},
-		description: 'The ID of the task to retrieve',
+		description: 'The human-readable ID of the task as shown in the 5day application (e.g. PRO-1)',
 	},
 	// ----------------------------------
 	//         Task: Move
@@ -447,6 +451,7 @@ export const taskFields: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		required: true,
+		placeholder: 'e.g. PRO-1',
 		displayOptions: {
 			show: {
 				resource: ['task'],
@@ -518,6 +523,7 @@ export const taskFields: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		required: true,
+		placeholder: 'e.g. PRO-1',
 		displayOptions: {
 			show: {
 				resource: ['task'],
@@ -539,17 +545,6 @@ export const taskFields: INodeProperties[] = [
 			},
 		},
 		options: [
-			{
-				displayName: 'Assignee Names or IDs',
-				name: 'assignee',
-				type: 'multiOptions',
-				typeOptions: {
-					loadOptionsMethod: 'getUsers',
-					loadOptionsDependsOn: ['projectId'],
-				},
-				default: [],
-				description: 'Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-			},
 			{
 				displayName: 'Budget Type',
 				name: 'budgetType',
@@ -594,17 +589,6 @@ export const taskFields: INodeProperties[] = [
 				description: 'Estimation value for the task (>= 0)',
 			},
 			{
-				displayName: 'Linked Task Names or IDs',
-				name: 'taskLinkItemId',
-				type: 'multiOptions',
-				typeOptions: {
-					loadOptionsMethod: 'getTasks',
-					loadOptionsDependsOn: ['projectId'],
-				},
-				default: [],
-				description: 'Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-			},
-			{
 				displayName: 'Name',
 				name: 'name',
 				type: 'string',
@@ -629,9 +613,10 @@ export const taskFields: INodeProperties[] = [
 				typeOptions: {
 					minValue: 0,
 					maxValue: 100,
+					numberPrecision: 0,
 				},
 				default: 0,
-				description: 'The progress percentage of the task (1-100)',
+				description: 'The progress percentage of the task (0-100)',
 			},
 			{
 				displayName: 'Section Name or ID',
@@ -657,7 +642,7 @@ export const taskFields: INodeProperties[] = [
 				type: 'options',
 				typeOptions: {
 					loadOptionsMethod: 'getTaskStatuses',
-					loadOptionsDependsOn: ['projectId'],
+					loadOptionsDependsOn: ['projectId', 'taskId'],
 				},
 				default: '',
 				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
@@ -668,24 +653,14 @@ export const taskFields: INodeProperties[] = [
 				type: 'number',
 				typeOptions: {
 					minValue: 0,
+					maxValue: 99.99,
 					numberPrecision: 2,
 				},
 				default: 0,
 				description: 'Story point value for the task (>= 0)',
 			},
 			{
-				displayName: 'Tag Names or IDs',
-				name: 'tags',
-				type: 'multiOptions',
-				typeOptions: {
-					loadOptionsMethod: 'getTags',
-					loadOptionsDependsOn: ['projectId'],
-				},
-				default: [],
-				description: 'Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-			},
-			{
-				displayName: 'Work Item Type Name or ID',
+				displayName: 'Task Type Name or ID',
 				name: 'workitemTypeId',
 				type: 'options',
 				typeOptions: {

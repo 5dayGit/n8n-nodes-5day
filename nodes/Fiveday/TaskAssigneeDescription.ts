@@ -1,35 +1,35 @@
 import type { INodeProperties } from 'n8n-workflow';
 
-export const taskTagOperations: INodeProperties = {
+export const taskAssigneeOperations: INodeProperties = {
 	displayName: 'Operation',
 	name: 'operation',
 	type: 'options',
 	noDataExpression: true,
 	displayOptions: {
 		show: {
-			resource: ['taskTag'],
+			resource: ['taskAssignee'],
 		},
 	},
 	options: [
 		{
-			name: 'Add Tag',
-			value: 'addTag',
-			description: 'Add a task tag',
-			action: 'Add a task tag',
+			name: 'Add Assignee',
+			value: 'addAssignee',
+			description: 'Add an assignee to a task',
+			action: 'Add an assignee to a task',
 		},
 		{
-			name: 'Remove Tag',
-			value: 'removeTag',
-			description: 'Remove a task tag',
-			action: 'Remove a task tag',
+			name: 'Remove Assignee',
+			value: 'removeAssignee',
+			description: 'Remove an assignee from a task',
+			action: 'Remove an assignee from a task',
 		},
 	],
-	default: 'addTag',
+	default: 'addAssignee',
 };
 
-export const taskTagFields: INodeProperties[] = [
+export const taskAssigneeFields: INodeProperties[] = [
 	// ----------------------------------
-	//         Task Tag: Add Tag
+	//      Task Assignee: Add Assignee
 	// ----------------------------------
 	{
 		displayName: 'Task ID',
@@ -40,11 +40,11 @@ export const taskTagFields: INodeProperties[] = [
 		placeholder: 'e.g. PRO-1',
 		displayOptions: {
 			show: {
-				resource: ['taskTag'],
-				operation: ['addTag'],
+				resource: ['taskAssignee'],
+				operation: ['addAssignee'],
 			},
 		},
-		description: 'The ID of the task to add a tag to',
+		description: 'The ID of the task to add an assignee to',
 	},
 	{
 		displayName: 'Project Name or ID',
@@ -58,32 +58,32 @@ export const taskTagFields: INodeProperties[] = [
 		required: true,
 		displayOptions: {
 			show: {
-				resource: ['taskTag'],
-				operation: ['addTag'],
+				resource: ['taskAssignee'],
+				operation: ['addAssignee'],
 			},
 		},
 		description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 	},
 	{
-		displayName: 'Tag Names or IDs',
-		name: 'tags',
+		displayName: 'Assignee Names or IDs',
+		name: 'assignee',
 		type: 'multiOptions',
 		typeOptions: {
-			loadOptionsMethod: 'getTags',
-			loadOptionsDependsOn: ['projectId'],
+			loadOptionsMethod: 'getAssignees',
+			loadOptionsDependsOn: ['projectId', 'taskId'],
 		},
 		default: [],
 		required: true,
 		displayOptions: {
 			show: {
-				resource: ['taskTag'],
-				operation: ['addTag'],
+				resource: ['taskAssignee'],
+				operation: ['addAssignee'],
 			},
 		},
 		description: 'Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 	},
 	// ----------------------------------
-	//         Task Tag: Remove Tag
+	//     Task Assignee: Remove Assignee
 	// ----------------------------------
 	{
 		displayName: 'Task ID',
@@ -94,11 +94,11 @@ export const taskTagFields: INodeProperties[] = [
 		placeholder: 'e.g. PRO-1',
 		displayOptions: {
 			show: {
-				resource: ['taskTag'],
-				operation: ['removeTag'],
+				resource: ['taskAssignee'],
+				operation: ['removeAssignee'],
 			},
 		},
-		description: 'The ID of the task to remove a tag from',
+		description: 'The ID of the task to remove an assignee from',
 	},
 	{
 		displayName: 'Project Name or ID',
@@ -112,26 +112,26 @@ export const taskTagFields: INodeProperties[] = [
 		required: true,
 		displayOptions: {
 			show: {
-				resource: ['taskTag'],
-				operation: ['removeTag'],
+				resource: ['taskAssignee'],
+				operation: ['removeAssignee'],
 			},
 		},
 		description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 	},
 	{
-		displayName: 'Tag Names or IDs',
-		name: 'tags',
+		displayName: 'Assignee Names or IDs',
+		name: 'assignee',
 		type: 'multiOptions',
 		typeOptions: {
-			loadOptionsMethod: 'getTaskTags',
-			loadOptionsDependsOn: ['taskId'],
+			loadOptionsMethod: 'getAssignees',
+			loadOptionsDependsOn: ['projectId', 'taskId'],
 		},
 		default: [],
 		required: true,
 		displayOptions: {
 			show: {
-				resource: ['taskTag'],
-				operation: ['removeTag'],
+				resource: ['taskAssignee'],
+				operation: ['removeAssignee'],
 			},
 		},
 		description: 'Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
