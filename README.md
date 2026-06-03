@@ -19,31 +19,6 @@ This node allows you to automate project management tasks such as creating proje
 | Task Tag        | Add Tag, Remove Tag                                 |
 | User            | Get, Get Many                                       |
 
-## Authentication
-
-This node uses **OAuth2** (Authorization Code flow) to authenticate with the 5day API.
-
-You will need the following credentials from your 5day account:
-- **Client ID**
-- **Client Secret**
-
-### Setup Steps
-
-1. Log in to your 5day.io account.
-2. Navigate to:
-
-My Settings -> Integration Center -> Automation -> n8n
-
-3. Generate your **Client ID** and **Client Secret**.
-4. Open **n8n** and create a new credential of type:
-
-5day OAuth2 API
-
-5. Enter your **Client ID** and **Client Secret**.
-6. Complete the OAuth authorization process.
-
-After authentication, the credential can be reused across multiple workflows.
-
 ## Installation
 
 ### n8n Cloud / Self-hosted via GUI
@@ -63,6 +38,38 @@ If you are running a self-hosted n8n instance:
 npm install n8n-nodes-5day
 ```
 Restart your **n8n instance** after installation.
+
+## Authentication
+
+This node uses **OAuth2** (Authorization Code flow) to authenticate with the 5day API.
+
+You will need the following credentials from your 5day account:
+- **Client ID**
+- **Client Secret**
+
+## Setup Steps
+
+1. Log in to your 5day.io account.
+
+2. Open **n8n** and create a new credential of type **5day OAuth2 API**.
+
+3. Copy the **Redirect URL** displayed in the credential configuration.
+
+4. Navigate to **My Settings → Integration Center → Automation → n8n** in 5day.io.
+
+5. Paste the Redirect URL into the **Redirect URL** field and generate your **Client ID** and **Client Secret**.
+
+7. Enter the generated **Client ID** and **Client Secret** in the **5day OAuth2 API** credential in n8n.
+
+8. Click **Connect** to start the OAuth authentication flow.
+
+9. You will be redirected to the 5day.io login page. Sign in using your 5day.io credentials.
+
+10. If your user account has access to multiple 5day.io accounts (multi-tenant setup), select the account you want to authorize.
+
+11. After successful authentication and account selection, the OAuth process will complete automatically and the credential will be connected.
+
+12. The authenticated credential can now be reused across multiple n8n workflows.
 
 ## Usage
 
