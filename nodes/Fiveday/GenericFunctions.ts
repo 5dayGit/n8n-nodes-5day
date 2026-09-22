@@ -182,7 +182,11 @@ export async function fiveDayLoadOptions(
 			name: item[nameField] as string,
 			value: valueTransform ? valueTransform(item) : (item[valueField] as string),
 		}));
-	} catch {
+	} catch (error) {
+		// Return an empty list so the dropdown just appears empty instead of breaking the
+		// parameter UI; the underlying error (bad credentials, wrong endpoint, etc.) still
+		// surfaces to the user when they run execute().
+		this.logger.warn(`fiveDayLoadOptions: failed to load options for "${entity}": ${(error as Error).message}`);
 		return [];
 	}
 }
@@ -221,12 +225,12 @@ export function parseCustomAttributes(additionalFields: IDataObject): IDataObjec
 	return undefined;
 }
 
-export function parseStatusField(statusJson: string): IDataObject {
+export function parseStatusField(node: INode, statusJson: string): IDataObject {
 	let statusData: IDataObject;
 	try {
 		statusData = JSON.parse(statusJson) as IDataObject;
 	} catch {
-		throw new Error(`Invalid status value: expected JSON but received "${statusJson}"`);
+		throw new NodeOperationError(node, `Invalid status value: expected JSON but received "${statusJson}"`);
 	}
 	const result: IDataObject = {
 		statusId: statusData.statusId as string,
@@ -241,6 +245,7 @@ export function parseStatusField(statusJson: string): IDataObject {
 }
 
 export function validateDateRange(
+	node: INode,
 	startDate: string | undefined,
 	endDate: string | undefined,
 	endDateLabel = 'End date',
@@ -249,37 +254,37 @@ export function validateDateRange(
 		const start = new Date(startDate);
 		const end = new Date(endDate);
 		if (end < start) {
-			throw new Error(`${endDateLabel} must be after start date`);
+			throw new NodeOperationError(node, `${endDateLabel} must be after start date`);
 		}
 	}
 }
 
-export function validatePrefix(prefix: string): void {
+export function validatePrefix(node: INode, prefix: string): void {
 	const trimmedPrefix = prefix.trim().toUpperCase();
 	const prefixLength = trimmedPrefix.length;
 
 	if (prefixLength < 1 || prefixLength > 6) {
-		throw new Error('Prefix must be between 1 and 6 characters');
+		throw new NodeOperationError(node, 'Prefix must be between 1 and 6 characters');
 	}
 
 	const alphanumericPattern = /^[a-zA-Z0-9]*$/;
 	if (!alphanumericPattern.test(trimmedPrefix)) {
-		throw new Error('Prefix can only contain alphanumeric characters (letters and numbers)');
+		throw new NodeOperationError(node, 'Prefix can only contain alphanumeric characters (letters and numbers)');
 	}
 
 	const restrictedPattern = /^[WSG]\d+$/;
 	if (restrictedPattern.test(trimmedPrefix)) {
-		throw new Error('Prefix cannot start with W, S, or G followed by numbers');
+		throw new NodeOperationError(node, 'Prefix cannot start with W, S, or G followed by numbers');
 	}
 }
 
-export function validateStoryPoint(storyPoint: number): void {
+export function validateStoryPoint(node: INode, storyPoint: number): void {
 	if (storyPoint < 0 || storyPoint > 99.99) {
-		throw new Error('Story Point must be between 0 and 99.99');
+		throw new NodeOperationError(node, 'Story Point must be between 0 and 99.99');
 	}
 }
 
-export function applyWorkItemFields(body: IDataObject, additionalFields: IDataObject): void {
+export function applyWorkItemFields(node: INode, body: IDataObject, additionalFields: IDataObject): void {
 	if (additionalFields.sectionId) {
 		body.sectionId = additionalFields.sectionId as string;
 	}
@@ -298,6 +303,7 @@ export function applyWorkItemFields(body: IDataObject, additionalFields: IDataOb
 
 	if (additionalFields.dueDate) {
 		validateDateRange(
+			node,
 			additionalFields.startDate as string | undefined,
 			additionalFields.dueDate as string,
 			'Due date',
@@ -310,7 +316,7 @@ export function applyWorkItemFields(body: IDataObject, additionalFields: IDataOb
 	}
 
 	if (additionalFields.taskStatusId) {
-		const statusData = parseStatusField(additionalFields.taskStatusId as string);
+		const statusData = parseStatusField(node, additionalFields.taskStatusId as string);
 		body.taskStatusId = statusData.statusId;
 		if (statusData.stage !== undefined) {
 			body.stage = statusData.stage;

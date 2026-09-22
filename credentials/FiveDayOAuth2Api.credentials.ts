@@ -9,7 +9,7 @@ export class FiveDayOAuth2Api implements ICredentialType {
 	name = 'fiveDayOAuth2Api';
 
 	extends = ['oAuth2Api'];
-	icon: Icon = 'file:5day.svg';
+	icon: Icon = { light: 'file:5day.svg', dark: 'file:5day_DM.svg' };
 
 	displayName = '5day OAuth2 API';
 

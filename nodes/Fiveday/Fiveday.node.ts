@@ -35,7 +35,7 @@ export class Fiveday implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: '5day.io',
 		name: 'fiveday',
-		icon: 'file:5day_logo.svg',
+		icon: { light: 'file:5day_logo.svg', dark: 'file:5day_logo_DM.svg' },
 		group: ['transform'],
 		version: 1,
 		usableAsTool: true,
@@ -394,9 +394,6 @@ export class Fiveday implements INodeType {
 					});
 					continue;
 				}
-				if (error instanceof NodeApiError) {
-					throw error;
-				}
 				throw new NodeApiError(this.getNode(), error as JsonObject);
 			}
 		}
@@ -442,6 +439,7 @@ async function executeProjectCreate(this: IExecuteFunctions, i: number): Promise
 
 	if (additionalFields.endDate) {
 		validateDateRange(
+			this.getNode(),
 			additionalFields.startDate as string | undefined,
 			additionalFields.endDate as string,
 			'End date',
@@ -454,7 +452,7 @@ async function executeProjectCreate(this: IExecuteFunctions, i: number): Promise
 	}
 
 	if (additionalFields.prefix) {
-		validatePrefix(additionalFields.prefix as string);
+		validatePrefix(this.getNode(), additionalFields.prefix as string);
 		body.prefix = additionalFields.prefix as string;
 	}
 
@@ -467,7 +465,7 @@ async function executeProjectCreate(this: IExecuteFunctions, i: number): Promise
 	}
 
 	if (additionalFields.statusId) {
-		const statusData = parseStatusField(additionalFields.statusId as string);
+		const statusData = parseStatusField(this.getNode(), additionalFields.statusId as string);
 		body.workItemStatusId = statusData.statusId;
 		if (statusData.stage !== undefined) {
 			body.stage = statusData.stage;
@@ -544,6 +542,7 @@ async function executeProjectUpdate(this: IExecuteFunctions, i: number): Promise
 
 	if (additionalFields.endDate) {
 		validateDateRange(
+			this.getNode(),
 			additionalFields.startDate as string | undefined,
 			additionalFields.endDate as string,
 			'End date',
@@ -556,7 +555,7 @@ async function executeProjectUpdate(this: IExecuteFunctions, i: number): Promise
 	}
 
 	if (additionalFields.prefix) {
-		validatePrefix(additionalFields.prefix as string);
+		validatePrefix(this.getNode(), additionalFields.prefix as string);
 		body.prefix = additionalFields.prefix as string;
 	}
 
@@ -569,7 +568,7 @@ async function executeProjectUpdate(this: IExecuteFunctions, i: number): Promise
 	}
 
 	if (additionalFields.statusId) {
-		const statusData = parseStatusField(additionalFields.statusId as string);
+		const statusData = parseStatusField(this.getNode(), additionalFields.statusId as string);
 		body.workItemStatusId = statusData.statusId;
 		if (statusData.stage !== undefined) {
 			body.stage = statusData.stage;
@@ -623,10 +622,10 @@ async function executeTaskCreate(this: IExecuteFunctions, i: number): Promise<ID
 	};
 
 	if (additionalFields.storyPoint !== undefined) {
-		validateStoryPoint(additionalFields.storyPoint as number);
+		validateStoryPoint(this.getNode(), additionalFields.storyPoint as number);
 	}
 
-	applyWorkItemFields(body, additionalFields);
+	applyWorkItemFields(this.getNode(), body, additionalFields);
 
 	if (additionalFields.assignee && Array.isArray(additionalFields.assignee) && (additionalFields.assignee as string[]).length > 0) {
 		body.assignee = additionalFields.assignee as string[];
@@ -692,10 +691,10 @@ async function executeTaskUpdate(this: IExecuteFunctions, i: number): Promise<ID
 	}
 
 	if (additionalFields.storyPoint !== undefined) {
-		validateStoryPoint(additionalFields.storyPoint as number);
+		validateStoryPoint(this.getNode(), additionalFields.storyPoint as number);
 	}
 
-	applyWorkItemFields(body, additionalFields);
+	applyWorkItemFields(this.getNode(), body, additionalFields);
 
 	if (additionalFields.assignee && Array.isArray(additionalFields.assignee) && (additionalFields.assignee as string[]).length > 0) {
 		body.assignee = additionalFields.assignee as string[];
@@ -783,10 +782,10 @@ async function executeSubtaskCreate(this: IExecuteFunctions, i: number): Promise
 	};
 
 	if (additionalFields.storyPoint !== undefined) {
-		validateStoryPoint(additionalFields.storyPoint as number);
+		validateStoryPoint(this.getNode(), additionalFields.storyPoint as number);
 	}
 
-	applyWorkItemFields(body, additionalFields);
+	applyWorkItemFields(this.getNode(), body, additionalFields);
 
 	if (additionalFields.assignee) {
 		body.assignee = [additionalFields.assignee as string];
