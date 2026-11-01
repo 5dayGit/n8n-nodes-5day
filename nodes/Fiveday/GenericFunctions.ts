@@ -67,8 +67,8 @@ export async function fiveDayApiRequest(
 	isExecution = false,
 ): Promise<IDataObject> {
 	const basePath = isExecution
-		? `/api/integration-service/v1/execution/${PLATFORM}/event/${entity}`
-		: `/api/integration-service/v1/data/${PLATFORM}/${entity}`;
+		? `/api/integration-service/v1/nocode-tool/execution/${PLATFORM}/event/${entity}`
+		: `/api/integration-service/v1/nocode-tool/data/${PLATFORM}/${entity}`;
 
 	try {
 		const response = await this.helpers.httpRequestWithAuthentication.call(this, 'fiveDayOAuth2Api', {
@@ -118,7 +118,7 @@ export async function fiveDayApiRequestAllItems(
 		try {
 			response = await this.helpers.httpRequestWithAuthentication.call(this, 'fiveDayOAuth2Api', {
 				method: 'GET',
-				url: `${BASE_URL}/api/integration-service/v1/data/${PLATFORM}/${entity}`,
+				url: `${BASE_URL}/api/integration-service/v1/nocode-tool/data/${PLATFORM}/${entity}`,
 				headers: {
 					'Content-Type': 'application/json',
 					...headers,
@@ -167,7 +167,7 @@ export async function fiveDayLoadOptions(
 	try {
 		const response = await this.helpers.httpRequestWithAuthentication.call(this, 'fiveDayOAuth2Api', {
 			method: 'GET',
-			url: `${BASE_URL}/api/integration-service/v1/data/${PLATFORM}/${entity}`,
+			url: `${BASE_URL}/api/integration-service/v1/nocode-tool/data/${PLATFORM}/${entity}`,
 			headers: {
 				'Content-Type': 'application/json',
 				...extraHeaders,

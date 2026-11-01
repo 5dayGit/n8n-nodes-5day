@@ -78,7 +78,7 @@ export class FiveDayOAuth2Api implements ICredentialType {
 	test: ICredentialTestRequest = {
 		request: {
 			baseURL: 'https://gateway.5day.io',
-			url: '/api/integration-service/v1/data/n8n/workspace',
+			url: '/api/integration-service/v1/nocode-tool/data/n8n/workspace',
 			method: 'GET',
 		},
 	};
