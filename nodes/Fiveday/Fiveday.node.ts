@@ -584,7 +584,7 @@ async function executeProjectUpdate(this: IExecuteFunctions, i: number): Promise
 
 async function executeProjectGetAll(this: IExecuteFunctions, i: number): Promise<IDataObject[]> {
 	const workspaceId = this.getNodeParameter('workspaceId', i) as string;
-	const filterBySpace = this.getNodeParameter('filterBySpace', i) as boolean;
+	const filters = this.getNodeParameter('filters', i, {}) as IDataObject;
 	const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 	const limit = this.getNodeParameter('limit', i, 50) as number;
 
@@ -592,10 +592,7 @@ async function executeProjectGetAll(this: IExecuteFunctions, i: number): Promise
 		'workspace-id': workspaceId,
 	};
 
-	if (filterBySpace) {
-		const spaceId = this.getNodeParameter('spaceId', i) as string;
-		if (spaceId) headers['space-id'] = spaceId;
-	}
+	if (filters.spaceId) headers['space-id'] = filters.spaceId as string;
 
 	const results = await fiveDayApiRequestAllItems.call(this, 'projectdetail', headers, returnAll, limit);
 	return results.map((item) => ({ json: item }));
@@ -706,7 +703,7 @@ async function executeTaskUpdate(this: IExecuteFunctions, i: number): Promise<ID
 
 async function executeTaskGetAll(this: IExecuteFunctions, i: number): Promise<IDataObject[]> {
 	const projectId = this.getNodeParameter('projectId', i) as string;
-	const filterBySection = this.getNodeParameter('filterBySection', i) as boolean;
+	const filters = this.getNodeParameter('filters', i, {}) as IDataObject;
 	const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 	const limit = this.getNodeParameter('limit', i, 50) as number;
 
@@ -714,10 +711,7 @@ async function executeTaskGetAll(this: IExecuteFunctions, i: number): Promise<ID
 		'project-id': projectId,
 	};
 
-	if (filterBySection) {
-		const sectionId = this.getNodeParameter('sectionId', i) as string;
-		if (sectionId) headers['section-id'] = sectionId;
-	}
+	if (filters.sectionId) headers['section-id'] = filters.sectionId as string;
 
 	const results = await fiveDayApiRequestAllItems.call(this, 'workitem', headers, returnAll, limit);
 	return results.map((item) => ({ json: item }));
@@ -798,7 +792,7 @@ async function executeSubtaskCreate(this: IExecuteFunctions, i: number): Promise
 async function executeSubtaskGetAll(this: IExecuteFunctions, i: number): Promise<IDataObject[]> {
 	const projectId = this.getNodeParameter('projectId', i) as string;
 	const parentTaskId = this.getNodeParameter('parentTaskId', i) as string;
-	const filterBySection = this.getNodeParameter('filterBySection', i) as boolean;
+	const filters = this.getNodeParameter('filters', i, {}) as IDataObject;
 	const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 	const limit = this.getNodeParameter('limit', i, 50) as number;
 
@@ -807,10 +801,7 @@ async function executeSubtaskGetAll(this: IExecuteFunctions, i: number): Promise
 		'parent-id': parentTaskId,
 	};
 
-	if (filterBySection) {
-		const sectionId = this.getNodeParameter('sectionId', i) as string;
-		if (sectionId) headers['section-id'] = sectionId;
-	}
+	if (filters.sectionId) headers['section-id'] = filters.sectionId as string;
 
 	const results = await fiveDayApiRequestAllItems.call(this, 'workitem', headers, returnAll, limit);
 	return results.map((item) => ({ json: item }));
@@ -877,22 +868,14 @@ async function executeUserGet(this: IExecuteFunctions, i: number): Promise<IData
 
 
 async function executeUserGetAll(this: IExecuteFunctions, i: number): Promise<IDataObject[]> {
-	const filterByWorkspace = this.getNodeParameter('filterByWorkspace', i) as boolean;
-	const filterByProject = this.getNodeParameter('filterByProject', i) as boolean;
+	const filters = this.getNodeParameter('filters', i, {}) as IDataObject;
 	const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 	const limit = this.getNodeParameter('limit', i, 50) as number;
 
 	const headers: IDataObject = {};
 
-	if (filterByWorkspace) {
-		const workspaceId = this.getNodeParameter('workspaceId', i) as string;
-		if (workspaceId) headers['workspace-id'] = workspaceId;
-	}
-
-	if (filterByProject) {
-		const projectId = this.getNodeParameter('projectId', i) as string;
-		if (projectId) headers['project-id'] = projectId;
-	}
+	if (filters.workspaceId) headers['workspace-id'] = filters.workspaceId as string;
+	if (filters.projectId) headers['project-id'] = filters.projectId as string;
 
 	const results = await fiveDayApiRequestAllItems.call(this, 'users', headers, returnAll, limit);
 	return results.map((item) => ({ json: item }));

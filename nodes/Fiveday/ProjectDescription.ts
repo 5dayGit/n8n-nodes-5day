@@ -227,37 +227,32 @@ export const projectFields: INodeProperties[] = [
 		},
 		description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 	},
-	{
-		displayName: 'Filter by Space',
-		name: 'filterBySpace',
-		type: 'boolean',
-		default: false,
-		displayOptions: {
-			show: {
-				resource: ['project'],
-				operation: ['getAll'],
+		{
+			displayName: 'Filters',
+			name: 'filters',
+			type: 'collection',
+			placeholder: 'Add Filter',
+			default: {},
+			displayOptions: {
+				show: {
+					resource: ['project'],
+					operation: ['getAll'],
+				},
 			},
+			options: [
+				{
+					displayName: 'Space Name or ID',
+					name: 'spaceId',
+					type: 'options',
+					typeOptions: {
+						loadOptionsMethod: 'getSpaces',
+						loadOptionsDependsOn: ['workspaceId'],
+					},
+					default: '',
+					description: 'Only return projects in this space. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				},
+			],
 		},
-		description: 'Whether to filter projects by a specific space',
-	},
-	{
-		displayName: 'Space Name or ID',
-		name: 'spaceId',
-		type: 'options',
-		typeOptions: {
-			loadOptionsMethod: 'getSpaces',
-			loadOptionsDependsOn: ['workspaceId'],
-		},
-		default: '',
-		displayOptions: {
-			show: {
-				resource: ['project'],
-				operation: ['getAll'],
-				filterBySpace: [true],
-			},
-		},
-		description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-	},
 	{
 		displayName: 'Return All',
 		name: 'returnAll',

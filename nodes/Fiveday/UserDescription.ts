@@ -49,70 +49,43 @@ export const userFields: INodeProperties[] = [
 	// ----------------------------------
 	//         User: Get All
 	// ----------------------------------
-	{
-		displayName: 'Filter by Workspace',
-		name: 'filterByWorkspace',
-		type: 'boolean',
-		default: false,
-		displayOptions: {
-			show: {
-				resource: ['user'],
-				operation: ['getAll'],
+		{
+			displayName: 'Filters',
+			name: 'filters',
+			type: 'collection',
+			placeholder: 'Add Filter',
+			default: {},
+			displayOptions: {
+				show: {
+					resource: ['user'],
+					operation: ['getAll'],
+				},
 			},
+			options: [
+				{
+					displayName: 'Project Name or ID',
+					name: 'projectId',
+					type: 'options',
+					typeOptions: {
+						loadOptionsMethod: 'getProjects',
+						loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
+					},
+					default: '',
+					description: 'Only return users in this project. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				},
+				{
+					displayName: 'Workspace Name or ID',
+					name: 'workspaceId',
+					type: 'options',
+					typeOptions: {
+						loadOptionsMethod: 'getWorkspaces',
+						loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
+					},
+					default: '',
+					description: 'Only return users in this workspace. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				},
+			],
 		},
-		description: 'Whether to filter users by a specific workspace',
-	},
-	{
-		displayName: 'Workspace Name or ID',
-		name: 'workspaceId',
-		type: 'options',
-		typeOptions: {
-			loadOptionsMethod: 'getWorkspaces',
-			loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
-		},
-		default: '',
-		required: true,
-		displayOptions: {
-			show: {
-				resource: ['user'],
-				operation: ['getAll'],
-				filterByWorkspace: [true],
-			},
-		},
-		description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-	},
-	{
-		displayName: 'Filter by Project',
-		name: 'filterByProject',
-		type: 'boolean',
-		default: false,
-		displayOptions: {
-			show: {
-				resource: ['user'],
-				operation: ['getAll'],
-			},
-		},
-		description: 'Whether to filter users by a specific project',
-	},
-	{
-		displayName: 'Project Name or ID',
-		name: 'projectId',
-		type: 'options',
-		typeOptions: {
-			loadOptionsMethod: 'getProjects',
-			loadOptionsDependsOn: ['credentials.fiveDayOAuth2Api'],
-		},
-		default: '',
-		required: true,
-		displayOptions: {
-			show: {
-				resource: ['user'],
-				operation: ['getAll'],
-				filterByProject: [true],
-			},
-		},
-		description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-	},
 	{
 		displayName: 'Return All',
 		name: 'returnAll',

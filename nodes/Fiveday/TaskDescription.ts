@@ -298,37 +298,32 @@ export const taskFields: INodeProperties[] = [
 		},
 		description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 	},
-	{
-		displayName: 'Filter by Section',
-		name: 'filterBySection',
-		type: 'boolean',
-		default: false,
-		displayOptions: {
-			show: {
-				resource: ['task'],
-				operation: ['getAll'],
+		{
+			displayName: 'Filters',
+			name: 'filters',
+			type: 'collection',
+			placeholder: 'Add Filter',
+			default: {},
+			displayOptions: {
+				show: {
+					resource: ['task'],
+					operation: ['getAll'],
+				},
 			},
+			options: [
+				{
+					displayName: 'Section Name or ID',
+					name: 'sectionId',
+					type: 'options',
+					typeOptions: {
+						loadOptionsMethod: 'getSections',
+						loadOptionsDependsOn: ['projectId'],
+					},
+					default: '',
+					description: 'Only return tasks in this section. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				},
+			],
 		},
-		description: 'Whether to filter tasks by a specific section',
-	},
-	{
-		displayName: 'Section Name or ID',
-		name: 'sectionId',
-		type: 'options',
-		typeOptions: {
-			loadOptionsMethod: 'getSections',
-			loadOptionsDependsOn: ['projectId'],
-		},
-		default: '',
-		displayOptions: {
-			show: {
-				resource: ['task'],
-				operation: ['getAll'],
-				filterBySection: [true],
-			},
-		},
-		description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-	},
 	{
 		displayName: 'Return All',
 		name: 'returnAll',
